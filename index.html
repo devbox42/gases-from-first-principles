@@ -139,17 +139,26 @@ h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;l
 .caption{min-height:4.6em;margin-top:12px;font:400 clamp(16px,1.9vw,20px)/1.5 var(--display);color:var(--ink);max-width:70ch}
 .caption .who{font:500 11px/1 var(--mono);letter-spacing:.12em;color:var(--ink-2);text-transform:uppercase;display:block;margin-bottom:6px}
 .transport{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);flex-wrap:wrap}
-.tbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:40px;height:38px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--radius);background:var(--sheet);cursor:pointer;font:500 13px/1 var(--body)}
+.tbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:var(--radius);background:var(--sheet);cursor:pointer;font:500 13px/1 var(--body)}
 .tbtn:hover{border-color:var(--ink-2)}
 .tbtn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);min-width:96px}
 .tbtn[aria-pressed="true"]{border-color:var(--he);color:var(--he)}
 .beats{display:flex;gap:4px;flex:1;min-width:160px;align-items:center}
-.beats button{flex:1;height:8px;border-radius:4px;border:0;background:var(--rule);cursor:pointer;padding:0;min-width:6px}
-.beats button.past{background:var(--ink-2)}
-.beats button.now{background:var(--he)}
-.beats button.q{background:transparent;box-shadow:inset 0 0 0 2px var(--rule)}
-.beats button.q.past{box-shadow:inset 0 0 0 2px var(--ink-2)}
-.beats button.q.now{box-shadow:inset 0 0 0 2px var(--he)}
+/* 44 px tall hit area, 8 px visible bar */
+.beats button{flex:1;height:44px;border:0;background:none;cursor:pointer;padding:0;min-width:6px;position:relative}
+.beats button::before{content:"";position:absolute;left:0;right:0;top:18px;height:8px;border-radius:4px;background:var(--rule)}
+.beats button.past::before{background:var(--ink-2)}
+.beats button.now::before{background:var(--he)}
+.beats button.q::before{background:transparent;box-shadow:inset 0 0 0 2px var(--rule)}
+.beats button.q.past::before{box-shadow:inset 0 0 0 2px var(--ink-2)}
+.beats button.q.now::before{box-shadow:inset 0 0 0 2px var(--he)}
+.beats button:focus-visible{outline:2px solid var(--he);outline-offset:2px}
+/* full-screen player */
+.player.is-fs{position:fixed;inset:0;z-index:50;background:var(--paper);overflow:auto;padding:8px 12px;display:flex;flex-direction:column;gap:8px}
+.player:fullscreen{background:var(--paper)}
+.player.is-fs .stagebox{width:min(100%,calc((100dvh - 150px)*16/9));margin:0 auto;flex:none}
+.player.is-fs .panel,.player.is-fs .transport,.player.is-fs .caption{width:min(100%,1200px);margin:0 auto}
+html.pseudo-fs-on,html.pseudo-fs-on body{overflow:hidden}
 .beatname{font:500 12px/1 var(--mono);color:var(--ink-2);min-width:8em;text-align:right}
 .below{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;margin-top:22px}
 .below .card h3{font-size:18px;margin-bottom:8px}
@@ -2390,6 +2399,7 @@ CH.push({
           const f = PHYS.atm([0, 0], [1, 0], [(x - P1[0]) / u, (y - P1[1]) / u]);
           S._ro.textContent = 'three-body: ' + (f >= 0 ? '+' : '−') + Math.abs(f).toFixed(2);
           S._ro2.innerHTML = f > 0.02 ? '<tspan class="f-rep">pushes the trio apart</tspan>' : f < -0.02 ? '<tspan class="f-att">pulls the trio together</tspan>' : 'almost no effect';
+          S._a3.setAttribute('aria-valuetext', S._ro.textContent + ', ' + S._ro2.textContent);
         };
         S._set3(750, 347);
         S.text(110, 880, 'Axilrod–Teller–Muto term ∝ (1 + 3 cos ' + it('θ') + '₁ cos ' + it('θ') + '₂ cos ' + it('θ') + '₃)/(' + it('R') + sb('12') + it('R') + sb('13') + it('R') + sb('23') + ')³, in relative units; colour intensity grows with size.', { size: 21, cls: 'muted' });
@@ -3897,13 +3907,13 @@ function renderHome(anchor) {
 let keyHandler = null;
 let reelStop = null;
 function stopReel() { if (reelStop) { try { reelStop(); } catch (e) {} reelStop = null; } }
-function stopLesson() { stopReel(); interrupt(); if (P.cleanup) { try { P.cleanup(); } catch (e) {} P.cleanup = null; } P.gen++; S.gen = P.gen; P.playing = false; if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } }
+function stopLesson() { stopReel(); if (P.fsCleanup) { try { P.fsCleanup(); } catch (e) {} P.fsCleanup = null; } interrupt(); if (P.cleanup) { try { P.cleanup(); } catch (e) {} P.cleanup = null; } P.gen++; S.gen = P.gen; P.playing = false; if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } }
 
 function renderLesson(ch) {
   stopLesson();
   const app = document.getElementById('app'); app.replaceChildren(topbar());
   P.ch = ch; P.score = (store.get('score', {})[ch.id]) || {};
-  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stage', role: 'img', 'aria-label': 'Lesson animation for ' + ch.title });
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'stage', role: 'group', 'aria-roledescription': 'animation', 'aria-label': 'Lesson animation for ' + ch.title });
   const g = sv('g', {}, svg);
   const ov = hx('div', { class: 'overlay' });
   S.svg = svg; S.g = g; S.ov = ov;
@@ -3920,23 +3930,36 @@ function renderLesson(ch) {
   const beatsBar = hx('div', { class: 'beats', id: 'beats' }, ...ch.beats.map((b, k) => hx('button', { 'aria-label': 'Go to step ' + (k + 1) + ': ' + (b.label || b.id), title: b.label || b.id, onclick: () => gotoBeat(k, P.playing) })));
 
   const idx = CH.indexOf(ch);
+  /* full screen for the whole player (stage, questions, controls, caption); CSS fallback where the API is missing (iPhone) */
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const fsBtn = hx('button', { class: 'tbtn', 'aria-label': 'Full screen', title: 'Full screen' }, '⛶');
+  const player = hx('div', { class: 'player' }, hx('div', { class: 'stagebox' }, svg, ov), hx('div', { class: 'panel', id: 'panel', 'aria-live': 'polite' }));
+  const setFs = on => { player.classList.toggle('is-fs', on); document.documentElement.classList.toggle('pseudo-fs-on', on && !fsEl()); fsBtn.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); fsBtn.title = fsBtn.getAttribute('aria-label'); };
+  fsBtn.onclick = () => {
+    if (fsEl()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    if (player.classList.contains('is-fs')) { setFs(false); return; }
+    const req = player.requestFullscreen || player.webkitRequestFullscreen;
+    if (req) { const p = req.call(player); if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => setFs(true)); }
+    else setFs(true);
+  };
+  const onFs = () => setFs(fsEl() === player);
+  document.addEventListener('fullscreenchange', onFs); document.addEventListener('webkitfullscreenchange', onFs);
+  P.fsCleanup = () => { document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); document.documentElement.classList.remove('pseudo-fs-on'); if (fsEl()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {} };
   app.append(
     hx('div', { class: 'lesson-h' },
       hx('div', {}, hx('div', { class: 'eyebrow' }, 'Chapter ' + ch.n + ' of ' + CH.length + ' · ≈ ' + ch.minutes + ' min'), hx('h1', {}, ch.title)),
       hx('div', { class: 'right' },
         idx > 0 ? hx('a', { class: 'tbtn', href: '#' + CH[idx - 1].id, style: 'text-decoration:none' }, '← Ch. ' + CH[idx - 1].n) : null,
         idx < CH.length - 1 ? hx('a', { class: 'tbtn', href: '#' + CH[idx + 1].id, style: 'text-decoration:none' }, 'Ch. ' + CH[idx + 1].n + ' →') : null)),
-    hx('div', { class: 'stagebox' }, svg, ov),
-    hx('div', { class: 'panel', id: 'panel', 'aria-live': 'polite' }),
-    hx('div', { class: 'transport' },
+    (player.append(hx('div', { class: 'transport' },
       hx('button', { class: 'tbtn', 'aria-label': 'Previous step', onclick: () => gotoBeat(P.i - 1, P.playing) }, '⏮'),
       hx('button', { class: 'tbtn primary', id: 'playbtn', onclick: togglePlay }, '▶ Play'),
       hx('button', { class: 'tbtn', 'aria-label': 'Next step', onclick: () => gotoBeat(P.i + 1, P.playing) }, '⏭'),
       hx('button', { class: 'tbtn', 'aria-label': 'Replay this step', onclick: () => gotoBeat(P.i, true) }, '↺'),
       beatsBar,
       hx('span', { class: 'beatname', id: 'beatname' }),
-      voiceBtn, rateBtn),
-    hx('div', { class: 'caption', id: 'caption', 'aria-live': 'polite' }),
+      voiceBtn, rateBtn, fsBtn),
+    hx('div', { class: 'caption', id: 'caption', 'aria-live': 'polite' })), player),
     hx('div', { class: 'below' },
       hx('div', { class: 'prose' },
         hx('h3', { style: 'font-size:20px;margin-bottom:8px' }, 'About this chapter'),
