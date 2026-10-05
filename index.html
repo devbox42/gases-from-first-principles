@@ -698,7 +698,7 @@ const PHYS = {
   }
 };
 </script>
-<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "138e5ab9", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "37ae0853", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "49e3d79c", "50661b7c", "510f28dc", "51d53770", "5992aefa", "5dd99624", "64a38442", "67c5c42b", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "8586e33a", "8aa49894", "8f1dbb08", "901e8ae3", "90fc55fa", "95a8d84e", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a2ceac02", "a2f997f3", "a3ba9b42", "b21ebadd", "b22e34f9", "b9dc7daf", "c315a2de", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d198cc7e", "d769d47a", "d8199391", "e24e8e96", "e5918597", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
+<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "138e5ab9", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "37ae0853", "38d4164b", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "49e3d79c", "50661b7c", "510f28dc", "51d53770", "5992aefa", "5d460316", "5dd99624", "64a38442", "67c5c42b", "685a4c25", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "77b757e9", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "8586e33a", "8aa49894", "8f1dbb08", "901e8ae3", "90fc55fa", "95a8d84e", "97348e01", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a2ceac02", "a2f997f3", "a3ba9b42", "a92c8b97", "b21ebadd", "b22e34f9", "b70c5c24", "b9dc7daf", "bc0b77a8", "c315a2de", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d198cc7e", "d769d47a", "d8199391", "e24e8e96", "e2563ad4", "e5918597", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
@@ -792,6 +792,8 @@ const GAS = {
 const it = s => '<tspan font-style="italic">' + s + '</tspan>';
 const sb = s => '<tspan baseline-shift="sub" font-size="70%">' + s + '</tspan>';
 const sp = s => '<tspan baseline-shift="super" font-size="70%">' + s + '</tspan>';
+/* reduced temperature T* (asterisk as superscript) */
+const Tred = (sub = '') => it('T') + (sub ? sb(sub) : '') + sp('*');
 const uGas = (g, r) => { const s = GAS[g].rm / Math.pow(2, 1 / 6); return GAS[g].eps * PHYS.lj(r / s); };
 function arrowDefs(S) {
   const d = S.el('defs');
@@ -2464,7 +2466,7 @@ CH.push({
       id: 'explore-msmc', label: 'Try it: Mayer sampling',
       scene(S) {
         S.text(110, 90, 'Plain versus weighted sampling, live', { size: 44, cls: 't-disp' });
-        S.text(110, 135, 'Third virial coefficient of the Lennard-Jones model at ' + it('T') + '* = 2 (argon at about 240 K)', { size: 24, cls: 'muted' });
+        S.text(110, 135, 'Third virial coefficient of the Lennard-Jones model at ' + it('T') + sp('*') + ' = 2 (argon at about 240 K)', { size: 24, cls: 'muted' });
         const panel = (x, title, cls) => { const g = S.group(); S.card(x, 170, 330, 330, { parent: g }); S.text(x + 165, 205, title, { size: 22, anchor: 'middle', cls: 'f-' + cls, parent: g }); S.circle(x + 165, 340, 9, { class: 'f-ar', parent: g }); S.circle(x + 165, 340, 55, { fill: 'none', class: 'kr', 'stroke-width': 1.5, 'stroke-dasharray': '4 5', parent: g }); return S.group({ parent: g }); };
         S._dotsP = panel(110, 'plain: where it samples', 'kr');
         S._dotsM = panel(460, 'Mayer: where it samples', 'he');
@@ -2706,7 +2708,7 @@ CH.push({
         ['So far, the pair and three-body potentials have given us gases. Can they also give a whole phase diagram?'],
         ['Here is argon. Below the boiling curve it is a gas, above it a liquid.', S => { S.fadeIn(S._lab); S.fadeIn(S._melt); return S.drawOn(S._vap, 1200); }],
         ['The curve ends at the critical point, about a hundred and fifty-one kelvin and five megapascals. Beyond it, gas and liquid can no longer be told apart: the supercritical region.', S => { S.fadeIn(S._cp); S.fadeIn(S._tp); S.fadeIn(S._sc); }],
-        ['In 2016, Johann-Philipp Crusius, in his doctoral thesis at the University of Rostock supervised by Egon Hassel and Karsten Meier, simulated many argon atoms using, for the first time, a high-accuracy ab initio pair potential together with an ab initio three-body potential. It showed that these potentials also describe the dense, supercritical fluid, where the virial equation fails, mostly within the uncertainty of the reference equation of state.', S => S.fadeIn(S._rows[0])],
+        ['In 2016, Crusius, in his doctoral thesis at the University of Rostock, simulated many argon atoms using, for the first time, a high-accuracy ab initio pair potential together with an ab initio three-body potential. It showed that these potentials also describe the dense, supercritical fluid, where the virial equation fails, mostly within the uncertainty of the reference equation of state.', S => S.fadeIn(S._rows[0])],
         ['In 2021, Ströker, Hellmann and Meier derived compact formulas for every thermodynamic property in simulations at constant pressure.', S => S.fadeIn(S._rows[1])],
         ['With them, the liquid and supercritical states of argon and krypton came out almost within experimental uncertainty.', S => S.fadeIn(S._rows[2])],
         ['And in 2024, the Hamburg group traced the boiling curve itself, and simulated supercritical helium with path integrals. Theory now covers the gas, the liquid, the supercritical fluid and the boiling curve between them.', S => S.fadeIn(S._rows[3])],
@@ -2724,9 +2726,9 @@ CH.push({
         S._c = P.map(p => S.circle(ox + p[0] * px, oy + p[1] * px, px * .5, { class: 'f-ar', opacity: .85 }));
         S._T = 0.9; S._ro = S.text(860, 230, '', { size: 30, cls: 't-mono' }); S._ro2 = S.text(860, 280, '', { size: 26 });
         const e = (i, x, y) => { let u = 0; for (let j = 0; j < N; j++) { if (j === i) continue; let dx = x - P[j][0], dy = y - P[j][1]; dx -= Lb * Math.round(dx / Lb); dy -= Lb * Math.round(dy / Lb); const r2 = dx * dx + dy * dy; if (r2 < 6.25) { const r6 = 1 / (r2 * r2 * r2); u += 4 * (r6 * r6 - r6); } } return u; };
-        S._set = T => { S._T = T; S._ro.innerHTML = it('T') + '* = ' + T.toFixed(2); S._ro2.innerHTML = T < 0.41 ? 'below the triple point: solid-like clusters' : T < 0.46 ? 'below the critical temperature: liquid droplets in vapour' : T < 0.52 ? 'near the critical point: large fluctuations' : 'above the critical temperature: one homogeneous fluid'; };
+        S._set = T => { S._T = T; S._ro.innerHTML = it('T') + sp('*') + ' = ' + T.toFixed(2); S._ro2.innerHTML = T < 0.41 ? 'below the triple point: solid-like clusters' : T < 0.46 ? 'below the critical temperature: liquid droplets in vapour' : T < 0.52 ? 'near the critical point: large fluctuations' : 'above the critical temperature: one homogeneous fluid'; };
         S._set(0.9);
-        S.para(860, 380, 'Two-dimensional Lennard-Jones toy model,\nMetropolis Monte Carlo, 110 particles,\ncut-off 2.5' + it('σ') + ': ' + it('T') + '*' + sb('c') + ' ≈ 0.46, triple point ≈ 0.41.\n(The 3D Lennard-Jones fluid has ' + it('T') + '*' + sb('c') + ' ≈ 1.3.)', { size: 24, cls: 'muted' });
+        S.para(860, 380, 'Two-dimensional Lennard-Jones toy model,\nMetropolis Monte Carlo, 110 particles,\ncut-off 2.5' + it('σ') + ': ' + it('T') + sb('c') + sp('*') + ' ≈ 0.46, triple point ≈ 0.41.\n(The 3D Lennard-Jones fluid has ' + it('T') + sb('c') + sp('*') + ' ≈ 1.3.)', { size: 24, cls: 'muted' });
         const gen = S.gen;
         const loop = () => {
           if (gen !== S.gen) return;
@@ -2744,7 +2746,7 @@ CH.push({
       explore: {
         title: 'Cool the fluid below the critical temperature and give it a few seconds.',
         build(S, body, slider) {
-          slider(body, { id: 'T6p', label: 'temperature <i>T</i>* (reduced)', min: 0.3, max: 1.2, step: 0.01, value: 0.9, show: v => v.toFixed(2), onInput: v => S._set(v) });
+          slider(body, { id: 'T6p', label: 'reduced temperature <i>T</i><sup>*</sup> = <i>k</i><sub>B</sub><i>T</i>/<i>ε</i>', min: 0.3, max: 1.2, step: 0.01, value: 0.9, show: v => v.toFixed(2), onInput: v => S._set(v) });
           body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'Between about 0.41 and 0.46 the particles gather into liquid droplets surrounded by vapour: two phases. Below about 0.41 the clusters freeze. Above 0.46 they stay spread out, however long you wait: the supercritical fluid.' }));
         }
       },
@@ -3490,6 +3492,8 @@ CH.push({
   ]
 });
 </script>
+<script>window.REEL_CUES = {"atoms": [0, 9.6], "curve": [9.6, 16.8], "storm": [16.8, 26.4], "three": [26.4, 32.4], "quantum": [32.4, 38.4], "phase": [38.4, 45.6], "numbers": [45.6, 52.8], "title": [52.8, 60.0]};
+window.REEL_TEXT = [[1.0, 2.67, "Everything a gas does", "sub"], [4.4, 6.8, "begins with two molecules.", "sub"], [10.4, 16.4, "Computed from quantum mechanics alone.", "sub"], [18.0, 25.8, "Billions of collisions.", "big"], [27.0, 32.1, "Three is not three pairs.", "sub"], [32.9, 38.1, "Quantum blur. Molecular shape.", "sub"], [39.2, 45.2, "Boil it. Go supercritical.", "sub"]];</script>
 <script>
 /* ===================== trailer reel (canvas, synced to reel/reel.m4a) ===================== */
 const REEL = (() => {
@@ -3497,7 +3501,7 @@ const REEL = (() => {
   const C = { bg0: '#03060c', bg1: '#0b1424', amber: '#f2a65a', teal: '#3cc7b8', violet: '#b28cf0', rose: '#f07aa8', rep: '#ff6f52', att: '#6ea6ff', ink: '#e8eef6', dim: '#8ea3ba' };
   /* timeline: [start, end] in seconds; cuts sit on the 100 bpm grid (one bar = 2.4 s) */
   const CUE = window.REEL_CUES || { atoms: [0, 9.6], curve: [9.6, 16.8], storm: [16.8, 26.4], three: [26.4, 32.4], quantum: [32.4, 38.4], phase: [38.4, 45.6], numbers: [45.6, 52.8], title: [52.8, 60] };
-  const TEXT = [
+  const TEXT = window.REEL_TEXT || [
     [1.2, 4.2, 'Everything a gas does', 'sub'],
     [4.4, 8.6, 'begins with two molecules.', 'sub'],
     [10.6, 15.8, 'Computed from quantum mechanics alone.', 'sub'],
