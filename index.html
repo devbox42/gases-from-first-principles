@@ -631,16 +631,18 @@ const PHYS = {
     const pts = [[x, y]];
     const acc = (x, y) => { const r = Math.hypot(x, y); const f = F(Math.max(r, 0.5)) / r; return [f * x, f * y]; };
     let [ax, ay] = acc(x, y);
+    let aPrev = 0, chiAcc = 0;                // accumulated rotation of the velocity (counts orbits)
     const dt = 0.004 / Math.max(1, v0);
     for (let k = 0; k < 60000; k++) {
       x += vx * dt + .5 * ax * dt * dt; y += vy * dt + .5 * ay * dt * dt;
       const [nx, ny] = acc(x, y);
       vx += .5 * (ax + nx) * dt; vy += .5 * (ay + ny) * dt; ax = nx; ay = ny;
+      { const a = Math.atan2(vy, vx); let d = a - aPrev; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; chiAcc += d; aPrev = a; }
       if (k % 10 === 0) pts.push([x, y]);
       if (Math.hypot(x, y) > 5.5 && x * vx + y * vy > 0) break;
     }
     pts.push([x, y]);
-    const chi = Math.atan2(vy, vx);   // deflection angle (radians), negative = pulled toward partner
+    const chi = chiAcc;   // deflection angle (radians), negative = pulled toward partner; |χ| > π means orbiting
     return { pts, chi };
   },
   /* CO2 pair, rigid three-site model: Lennard-Jones sites + point charges (TraPPE parameters).
@@ -689,7 +691,7 @@ const PHYS = {
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
-  chips: ['9 chapters', '≈ 90 minutes', 'High-school physics & chemistry', 'Based on 77 papers, 2007–2026'],
+  chips: ['10 chapters', '≈ 110 minutes', 'High-school physics & chemistry', 'Based on 77 papers, 2007–2026'],
   ladderSVG: `<svg viewBox="0 0 520 420" class="stage" role="img" aria-label="The ladder from quantum mechanics to gas properties">
     <style>.lb{font:600 19px var(--display);fill:var(--ink)} .ls{font:400 13px var(--body);fill:var(--ink-2)} .lm{font:500 11px var(--mono);fill:var(--ink-2);letter-spacing:.1em}</style>
     <g transform="translate(24,26)">
@@ -858,7 +860,7 @@ CH.push({
           ['CO₂', 'Carbon capture', 'How much pressure builds\nin a CO₂ pipeline?'],
           ['CH₄', 'Natural gas', 'How much heat leaks\nthrough a gas layer?'],
           ['H₂O', 'Humid air', 'How fast does water\nvapour spread in air?'],
-          ['Ne', 'Thermometry', 'How exactly does neon\nbehave at −250 °C?']
+          ['Ne', 'Thermometry', 'How exactly does neon\nbehave far below −200 °C?']
         ];
         S._tiles = tiles.map(([f, h, q], k) => {
           const g = S.group({ hide: 1 }); S.place(g, 110 + k * 355, 190);
@@ -943,9 +945,9 @@ CH.push({
         S._b = [
           box(80, 180, 330, 470, 'RUNG 1', 'Quantum\nchemistry', 'Solve the\nSchrödinger equation\nfor two molecules', 'ar', 'ch. 3–4'),
           box(470, 180, 330, 470, 'RUNG 2', 'Pair\npotential', 'Energy at every\ndistance and angle', 'he', 'ch. 2–4'),
-          box(860, 180, 330, 220, 'RUNG 3a', 'Statistical\nmechanics', '', 'xe', 'ch. 5–6'),
-          box(860, 430, 330, 220, 'RUNG 3b', 'Kinetic\ntheory', '', 'ne', 'ch. 7'),
-          box(1250, 180, 290, 470, 'RESULT', 'Properties', 'pressure, density,\nspeed of sound\n\nviscosity, heat\nconduction,\ndiffusion', 'good', 'ch. 8–9')
+          box(860, 180, 330, 220, 'RUNG 3a', 'Statistical\nmechanics', '', 'xe', 'ch. 5–7'),
+          box(860, 430, 330, 220, 'RUNG 3b', 'Kinetic\ntheory', '', 'ne', 'ch. 8'),
+          box(1250, 180, 290, 470, 'RESULT', 'Properties', 'pressure, density,\nspeed of sound\n\nviscosity, heat\nconduction,\ndiffusion', 'good', 'ch. 9–10')
         ];
         const ar = (x1, y1, x2, y2) => S.line(x1, y1, x2, y2, { w: 4, cls: 'muted', style: 'stroke:var(--ink-2);color:var(--ink-2)', 'marker-end': 'url(#arr)', hide: 1 });
         S._a = [ar(415, 415, 462, 415), ar(805, 360, 852, 290), ar(805, 470, 852, 540), ar(1195, 290, 1242, 330), ar(1195, 540, 1242, 500)];
@@ -1021,7 +1023,7 @@ CH.push({
         const marks = [
           [3, 'textbook model\n(Lennard-Jones)', 'kr', -1],
           [0.1, 'good measurement\nof a gas property', 'kr', 1],
-          [0.02, 'best gas\nmeasurements', 'kr', -1],
+          [0.02, 'best pressure–density\nmeasurements', 'kr', -1],
           [0.003, 'neon polarizability,\ncomputed (2022)', 'he', 1],
           [0.00026, 'neon polarizability,\nmeasured (PTB)', 'kr', -1]
         ];
@@ -1050,12 +1052,12 @@ CH.push({
         const th = [
           ['Noble-gas pair potentials', 'He, Ne, Ar, Kr, Xe', 'ar', '2–3'],
           ['Molecular surfaces', 'CH₄, N₂, CO₂,\nH₂S, O₂, …', 'ne', '4'],
-          ['Virial equations of state', 'pairs, triples,\nup to 8th order', 'xe', '5–6'],
+          ['Virial equations of state', 'pairs, triples,\nup to 8th order', 'xe', '5–7'],
           ['Quantum effects', 'path integrals\nfor light atoms', 'he', '6'],
-          ['Kinetic theory', 'viscosity, heat flow,\ndiffusion', 'kr', '7'],
-          ['Precision metrology', 'temperature and\npressure standards', 'good', '8'],
-          ['Water and humid air', 'steam, isotopes,\nIAPWS standards', 'xe', '9'],
-          ['Mixtures for energy', 'natural gas, CCS,\nhydrogen', 'he', '9']
+          ['Kinetic theory', 'viscosity, heat flow,\ndiffusion', 'kr', '8'],
+          ['Precision metrology', 'temperature and\npressure standards', 'good', '9'],
+          ['Water and humid air', 'steam, isotopes,\nIAPWS standards', 'xe', '10'],
+          ['Mixtures for energy', 'natural gas, CCS,\nhydrogen', 'he', '10']
         ];
         S._th = th.map(([h, d, c, ch], k) => {
           const g = S.group({ hide: 1 }); S.place(g, 110 + (k % 4) * 350, 230 + Math.floor(k / 4) * 300);
@@ -1140,7 +1142,7 @@ CH.push({
         ['Take two argon atoms.'],
         ['Far apart, they do not notice each other. The energy of the pair is zero.', S => S._drive2(9, 7, 1200)],
         ['Bring them closer and they begin to attract. The energy drops below zero.', S => { S.fadeIn(S._curve, 1); return S._drive2(7, 3.76, 2200); }],
-        ['Near zero point three eight nanometres the attraction is strongest. This is the bottom of the well.'],
+        ['Near zero point three eight nanometres the energy is lowest: the bottom of the well. Here attraction and repulsion exactly balance.'],
         ['Push further: the electron clouds overlap, and the atoms repel, more and more steeply.', S => S._drive2(3.76, 3.2, 1600)],
         ['This curve, energy against distance, is the pair potential. Everything in this course grows out of it.', S => S._drive2(3.2, 3.76, 900)]
       ]
@@ -1194,7 +1196,7 @@ CH.push({
         ['For an instant, one side of an atom carries a little more negative charge. That makes a tiny, short-lived dipole. As long as the two jitter independently, the effects average out to zero.', S => S._flick(4, true, 0)],
         ['But each dipole nudges the neighbour’s cloud into a matching dipole, plus facing minus.', S => S._flick(5, true, 1)],
         ['The flickers lock in step, like two pendulums joined by a weak spring. Now the average energy is below zero: the pair attracts.', S => S._flick(6, true, 1)],
-        ['This is the London dispersion force. It fades very fast with distance, as one over R to the sixth.', S => S.fadeIn(S._law)],
+        ['This is the London dispersion force. Its energy fades very fast with distance, as one over R to the sixth.', S => S.fadeIn(S._law)],
         ['Double the distance, and the attraction becomes sixty-four times weaker.', S => S.fadeIn(S._law2)]
       ]
     },
@@ -1329,7 +1331,7 @@ CH.push({
           S.text(900, 0, d, { size: 24, cls: 'muted', parent: g });
           return g;
         });
-        S._eq = S.text(110, 680, 'Boltzmann factor:  exp(−' + it('V') + '/' + it('k') + sb('B') + it('T') + ') = exp(−(' + it('V') + '/' + it('k') + sb('B') + ')/' + it('T') + ')', { size: 38, cls: 't-disp', hide: 1 });
+        S._eq = S.text(110, 680, 'Boltzmann factor:  exp(−' + it('V') + '/(' + it('k') + sb('B') + it('T') + ')) = exp(−(' + it('V') + '/' + it('k') + sb('B') + ')/' + it('T') + ')', { size: 38, cls: 't-disp', hide: 1 });
         S._ex = S.para(110, 760, 'Argon at 300 K:  (' + it('ε') + '/' + it('k') + sb('B') + ')/' + it('T') + ' = 143 K / 300 K ≈ 0.48', { size: 32, cls: 't-mono', hide: 1 });
         S.text(110, 880, 'All five rows are the same energy. Strictly, the quantity quoted in kelvin is <tspan font-style="italic">ε</tspan>/<tspan font-style="italic">k</tspan><tspan baseline-shift="sub" font-size="70%">B</tspan>, the energy divided by the Boltzmann constant.', { size: 21, cls: 'muted' });
       },
@@ -1439,7 +1441,7 @@ CH.push({
     { a: 'Hellmann, Bich, Vogel', y: 2007, t: 'Ab initio potential energy curve for the helium atom pair and thermophysical properties of dilute helium gas. I. Helium–helium interatomic potential', j: 'Mol. Phys. 105, 3013', doi: '10.1080/00268970701730096', why: 'The method chain in its first form: large basis sets, higher-order coupled cluster, corrections.' },
     { a: 'Hellmann, Gaiser, Fellmuth, Vasyltsova, Bich', y: 2021, t: 'Thermophysical properties of low-density neon gas from highly accurate first-principles calculations and dielectric-constant gas thermometry measurements', j: 'J. Chem. Phys. 154, 164304', doi: '10.1063/5.0047999', why: 'A modern neon potential at the CCSDTQ(P) level with a full uncertainty budget.' },
     { a: 'Jäger, Hellmann, Bich, Vogel', y: 2016, t: 'State-of-the-art ab initio potential energy curve for the krypton atom pair', j: 'J. Chem. Phys. 144, 114304', doi: '10.1063/1.4943959', why: 'Relativistic corrections become essential for heavy atoms.' },
-    { a: 'Hellmann', y: 2022, t: 'Polarizability of neon from first-principles calculations', j: 'Phys. Rev. A 105, 022809', doi: '10.1103/PhysRevA.105.022809', why: 'The same machinery applied to a single atom property, to 0.003 %.' }
+    { a: 'Hellmann', y: 2022, t: 'Ab initio determination of the polarizability of neon', j: 'Phys. Rev. A 105, 022809', doi: '10.1103/PhysRevA.105.022809', why: 'The same machinery applied to a single atom property, to 0.003 %.' }
   ],
   beats: [
     Object.assign(introBeat(3, 'Asking Schrödinger', 'How do you compute the energy of two atoms\nto better than one part in a thousand?', (S, g) => {
@@ -1670,7 +1672,7 @@ CH.push({
     achievedBeat([
       { big: '8Z', t: 'Purpose-built extra-large basis sets for helium\nand neon to reach the complete-basis-set limit', src: 'Mol. Phys. 2007, 2008; J. Chem. Phys. 154 (2021)', say: 'Hellmann built extra-large basis sets for the light noble gases, so the extrapolation could be trusted.', c: 'ar' },
       { big: '(P)', t: 'Neon potential with coupled-cluster excitations\nup to CCSDTQ(P), with a full uncertainty budget', src: 'Hellmann et al., J. Chem. Phys. 154, 164304 (2021)', say: 'His 2021 neon potential climbs the method ladder further than almost anyone, and carries a full uncertainty budget.', c: 'ne' },
-      { big: '0.003 %', t: 'Polarizability of neon, computed with\nthe same machinery: <tspan font-style="italic">α</tspan> = 2.661 067(77) <tspan font-style="italic">e</tspan>²<tspan font-style="italic">a</tspan>₀²/<tspan font-style="italic">E</tspan><tspan baseline-shift="sub" font-size="70%">h</tspan>', src: 'Hellmann, Phys. Rev. A 105, 022809 (2022)', say: 'And the same tools give single-atom properties. Neon’s polarizability, to three thousandths of a percent. Chapter eight shows why that matters.', c: 'he' }
+      { big: '0.003 %', t: 'Polarizability of neon, computed with\nthe same machinery: <tspan font-style="italic">α</tspan> = 2.661 067(77) <tspan font-style="italic">e</tspan>²<tspan font-style="italic">a</tspan>₀²/<tspan font-style="italic">E</tspan><tspan baseline-shift="sub" font-size="70%">h</tspan>', src: 'Hellmann, Phys. Rev. A 105, 022809 (2022)', say: 'And the same tools give single-atom properties. Neon’s polarizability, to three thousandths of a percent. Chapter nine shows why that matters.', c: 'he' }
     ]),
     wrapBeat([
       ['Freeze the nuclei, solve for the electrons,\nrepeat at many distances.', 'Freeze the nuclei, solve for the electrons, and repeat at many distances.'],
@@ -1713,7 +1715,7 @@ function waterMol(S, x, y, ang, parent) {
 CH.push({
   id: 'shape', n: 4, title: 'Molecules have shape', minutes: 10,
   blurb: 'From one distance to six coordinates: potential energy surfaces for N₂, CO₂, methane, water, oxygen and friends.',
-  about: `<p>Atoms are spheres; molecules are not. For two rigid molecules the energy depends on the distance <i>and</i> on up to five angles. Hellmann and co-workers computed such potential energy surfaces for methane, hydrogen sulfide, nitrogen, carbon dioxide, ethylene oxide, nitrous oxide, propane, ethane and oxygen, and for many unlike pairs (chapter 9).</p><p>He is open about one compromise. For some surfaces (CH₄, N₂, propane, ethane, CH₄–N₂) he makes one small adjustment so that they reproduce the most accurate measured second virial coefficients, which makes them semi-empirical. Everything else is then predicted.</p>`,
+  about: `<p>Atoms are spheres; molecules are not. For two rigid molecules the energy depends on the distance <i>and</i> on up to five angles. Hellmann and co-workers computed such potential energy surfaces for methane, hydrogen sulfide, nitrogen, carbon dioxide, ethylene oxide, nitrous oxide, propane, ethane and oxygen, and for many unlike pairs (chapter 10).</p><p>He is open about one compromise. For some surfaces (CH₄, N₂, ethylene oxide, propane, ethane, CH₄–N₂) he makes one small adjustment so that they reproduce the most accurate measured second virial coefficients, which makes them semi-empirical. Everything else is then predicted.</p>`,
   sketch(g) {
     const rod = (x, y, a) => { const t = sv('g', { transform: `translate(${x},${y}) rotate(${a})` }, g); sv('line', { x1: -26, x2: 26, y1: 0, y2: 0, stroke: 'var(--ink-2)', 'stroke-width': 4 }, t); sv('circle', { cx: -26, r: 11, class: 'f-ne' }, t); sv('circle', { cx: 26, r: 11, class: 'f-ne' }, t); sv('circle', { r: 9, class: 'f-kr' }, t); };
     rod(90, 60, 0); rod(150, 95, 0); rod(230, 75, 90);
@@ -1830,7 +1832,7 @@ CH.push({
         const cx = 450, cy = 520, sc = 800;
         S.circle(cx, cy, 6, { class: 'f-kr' });
         S._arc = S.path('', { cls: 'kr', w: 2, 'stroke-dasharray': '4 6' });
-        const mol = () => { const g = S.group(); S.line(-116, 0, 116, 0, { w: 10, cls: 'muted', style: 'stroke:var(--ink-2)', parent: g }); S.circle(-116, 0, 48, { class: 'f-ne', opacity: .9, parent: g }); S.circle(116, 0, 48, { class: 'f-ne', opacity: .9, parent: g }); S.circle(0, 0, 40, { class: 'f-kr', parent: g }); return g; };
+        const mol = () => { const g = S.group(); S.line(-93, 0, 93, 0, { w: 10, cls: 'muted', style: 'stroke:var(--ink-2)', parent: g }); S.circle(-93, 0, 44, { class: 'f-ne', opacity: .9, parent: g }); S.circle(93, 0, 44, { class: 'f-ne', opacity: .9, parent: g }); S.circle(0, 0, 36, { class: 'f-kr', parent: g }); return g; };
         S._mA = mol(); S._mA.setAttribute('transform', `translate(${cx},${cy})`);
         S._mB = mol();
         S.text(cx, cy + 90, 'A', { size: 26, anchor: 'middle', cls: 'muted' });
@@ -1855,7 +1857,7 @@ CH.push({
           S._bar.setAttribute('height', -Eb * k); S._bar.setAttribute('class', E < 0 ? 'f-att' : 'f-rep');
           if (E < S._bestSeen) { S._bestSeen = E; S._bmark.setAttribute('y1', y0 - E * k); S._bmark.setAttribute('y2', y0 - E * k); }
           S._ro.innerHTML = '';
-          ['lowest energy ' + (E < 0 ? fmt(E, 0) + ' K' : 'above 0 K (no binding)') + ' at ' + it('R') + ' = ' + d.toFixed(3) + ' nm', 'best found so far: ' + fmt(S._bestSeen, 0) + ' K (orange mark)'].forEach((ln, i) => sv('tspan', { x: 110, dy: i ? 36 : 0, html: ln }, S._ro));
+          ['lowest energy ' + it('V') + '/' + it('k') + sb('B') + ' = ' + (E < 0 ? fmt(E, 0) + ' K' : 'above 0 K (no binding)') + ' at ' + it('R') + ' = ' + d.toFixed(3) + ' nm', 'best found so far: ' + fmt(S._bestSeen, 0) + ' K (orange mark)'].forEach((ln, i) => sv('tspan', { x: 110, dy: i ? 36 : 0, html: ln }, S._ro));
         };
         S._co2(54, 0);
         S._bestSeen = 0; S._bmark.setAttribute('y1', y0); S._bmark.setAttribute('y2', y0);
@@ -1867,7 +1869,7 @@ CH.push({
         build(S, body, slider) {
           let phi = 0, th = 0, sp, st;
           const row = hx('div', { class: 'row', style: 'grid-column:1/-1' });
-          [['end to end', 0, 0], ['T-shape', 90, 90], ['parallel', 90, 0], ['slipped parallel', 54, 0]].forEach(([n, p, t]) => row.append(hx('button', { class: 'go ghost', onclick: () => { phi = p; th = t; sp.value = p; st.value = t; sp.dispatchEvent(new Event('input')); st.dispatchEvent(new Event('input')); } }, n)));
+          [['end to end', 0, 0], ['T-shape', 90, 90], ['parallel', 90, 0], ['slipped parallel', 55, 0]].forEach(([n, p, t]) => row.append(hx('button', { class: 'go ghost', onclick: () => { phi = p; th = t; sp.value = p; st.value = t; sp.dispatchEvent(new Event('input')); st.dispatchEvent(new Event('input')); } }, n)));
           body.append(row);
           sp = slider(body, { id: 'phi4', label: 'position of B around A', min: 0, max: 90, step: 1, value: 0, show: v => v + '°', onInput: v => { phi = v; S._co2(phi, th); } });
           st = slider(body, { id: 'th4', label: 'rotation of B', min: 0, max: 180, step: 1, value: 0, show: v => v + '°', onInput: v => { th = v; S._co2(phi, th); } });
@@ -1904,15 +1906,15 @@ CH.push({
         S._A = A;
         S.path(S.curve(r => uGas('Ar', r) * .96, 3.3, 8, A.X, A.Y, 200, [-170, 100]), { cls: 'kr', w: 4, 'stroke-dasharray': '8 8' });
         S._tuned = S.path(S.curve(r => uGas('Ar', r) * .96, 3.3, 8, A.X, A.Y, 200, [-170, 100]), { cls: 'he', w: 6 });
-        S._Bro = S.text(1000, 780, '', { size: 28, cls: 't-mono' });
-        S._dial = t => { const f = lerp(.96, 1, t); S._tuned.setAttribute('d', S.curve(r => uGas('Ar', r) * f, 3.3, 8, A.X, A.Y, 200, [-170, 100])); S._needle.setAttribute('x2', 1180 + 55 * Math.sin(t * 1.4)); S._needle.setAttribute('y2', 330 - 55 * Math.cos(t * 1.4)); const B = PHYS.B2(296.15 / (143.2 * f * 0.837)) * 49.8; S._Bro.innerHTML = it('B') + '(296 K) = ' + fmt(B, 1) + ' cm³/mol' + (t > .99 ? ' ✓' : ''); };
+        S._Bro = S.text(1000, 780, '', { size: 23, cls: 't-mono' });
+        S._dial = t => { const f = lerp(.96, 1, t); S._tuned.setAttribute('d', S.curve(r => uGas('Ar', r) * f, 3.3, 8, A.X, A.Y, 200, [-170, 100])); S._needle.setAttribute('x2', 1180 + 55 * Math.sin(t * 1.4)); S._needle.setAttribute('y2', 330 - 55 * Math.cos(t * 1.4)); const B = PHYS.B2(296.15 / (143.2 * f * 0.837)) * 49.8; S._Bro.innerHTML = 'illustrative ' + it('B') + '(296 K) = ' + fmt(B, 1) + ' cm³/mol' + (t > .99 ? ' ✓' : ''); };
         S._k = S.group({ hide: 1 });
         S.circle(1180, 330, 80, { class: 'fill-paper stroke-rule', 'stroke-width': 4, parent: S._k });
         S._needle = S.line(1180, 330, 1180, 270, { w: 6, cls: 'he', parent: S._k });
         S.text(1180, 450, 'one small adjustment', { size: 26, anchor: 'middle', parent: S._k });
         S._t = S.para(1000, 540, 'set by the most accurate\nmeasured ' + it('B') + ' values', { size: 28, hide: 1 });
         S._t2 = S.para(1000, 660, 'everything else is predicted', { size: 30, cls: 'f-good t-disp', hide: 1 });
-        S.text(170, 880, 'Used for CH₄, N₂, propane, ethane and CH₄–N₂. Schematic curves.', { size: 21, cls: 'muted' });
+        S.text(170, 880, 'Used for CH₄, N₂, ethylene oxide, propane, ethane and CH₄–N₂ (tuned to ' + it('B') + ' or its acoustic counterpart). Schematic curves.', { size: 21, cls: 'muted' });
       },
       lines: [
         ['For these molecules, small leftover errors, from the highest-level corrections or from treating molecules as rigid, rival the best measurements.'],
@@ -2126,7 +2128,7 @@ CH.push({
         S._room = S.group({ hide: 1 });
         S.line(A.X(273.15), A.Y(-200), A.X(273.15), A.Y(40), { w: 2, cls: 'muted', style: 'stroke:var(--ink-2)', 'stroke-dasharray': '6 6', parent: S._room });
         S.text(A.X(273.15) + 12, A.Y(-190), '0 °C: ' + it('B') + ' ≈ ' + fmt(Bar(273.15), 0) + ' cm³/mol', { size: 26, cls: 't-mono', parent: S._room });
-        S.text(200, 880, 'Lennard-Jones model of argon. Ab initio potentials give the real curve, with uncertainties.', { size: 21, cls: 'muted' });
+        S.text(200, 880, 'Effective Lennard-Jones model of argon (fitted to ' + it('B') + '; the true well is ≈ 143 K). Ab initio potentials give the real curve.', { size: 21, cls: 'muted' });
       },
       lines: [
         ['Here is B across the whole temperature range.', S => S.drawOn(S._c, 1400)],
@@ -2161,7 +2163,7 @@ CH.push({
         title: 'Make the well depth slightly wrong and see what happens to B.',
         build(S, body, slider) {
           slider(body, { id: 'e5', label: 'error in the well depth <i>ε</i>', min: -3, max: 3, step: 0.1, value: 1, show: v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' %', onInput: v => S._set(v / 100) });
-          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'A 1 % error in <i>ε</i> already shifts <i>B</i> by about 4 % at room temperature, and by tens of percent near the Boyle temperature, where <i>B</i> itself is close to zero. That is why a well depth known to ±0.25 % matters.' }));
+          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'A 1 % error in <i>ε</i> already shifts <i>B</i> by about 4 % (≈ 0.6 cm³/mol) at room temperature, and by tens of percent near the Boyle temperature, where <i>B</i> itself is close to zero (≈ 0.4 cm³/mol absolute). That is why krypton\u2019s well depth known to ±0.25 % (chapter 2) matters.' }));
         }
       },
       lines: [['Here is why the potential has to be so exact. Give the well depth a small error, and watch the virial coefficient.']]
@@ -2211,7 +2213,7 @@ CH.push({
         q: 'Roughly how large is the <i>B</i> correction at 100 bar, in percent? (Enter a positive number.)',
         ans: 9, tol: 2, unit: '%',
         hint: 'The correction grows in proportion to the density: 0.09 % × 100.',
-        why: 'About 9 %: no longer a small correction. At such densities the <i>C</i> term and beyond matter too, which is where chapter 6 begins.'
+        why: 'About 9 %: no longer a small correction. Real argon at 100 bar has <i>Z</i> ≈ 0.93 to 0.94: the <i>C</i> term already gives back about 3 %. That is where chapter 6 begins.'
       }
     },
     achievedBeat([
@@ -2238,9 +2240,9 @@ const atmSign = (A, B, C) => {   // Axilrod–Teller–Muto angular factor for a
 };
 const lamDB = (massU, T) => 6.62607015e-34 / Math.sqrt(2 * Math.PI * massU * 1.66053907e-27 * 1.380649e-23 * T) * 1e9;  // nm
 CH.push({
-  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 17,
+  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 14,
   blurb: 'Three molecules are not three pairs, and light atoms are not points. Both effects decide the last fraction of a percent.',
-  about: `<p>Two refinements turn good predictions into reference-grade ones. First, nonadditive three-body forces: the energy of three molecules differs from the sum of their pair energies. They enter the third virial coefficient <i>C</i> and every property of dense fluids. Second, quantum effects: light atoms at low temperature are smeared out over a thermal de Broglie wavelength comparable to their size.</p><p>Hellmann developed a virial formalism for nonadditive potentials (2011), computed three-body potentials for argon and CO₂, and built virial equations of state up to the eighth coefficient. With Giovanni Garberoglio he uses path-integral Monte Carlo to include quantum effects exactly.</p><p>The high-order coefficients are integrals over many molecules at once; they are computed with Mayer-sampling Monte Carlo (Singh &amp; Kofke), a weighted sampling of the cluster integrals relative to a hard-sphere reference. The chapter ends with many-particle simulations: from J.-P. Crusius's 2016 thesis on argon to the liquid, supercritical and saturated states of argon and krypton computed at HSU (2021 to 2024).</p>`,
+  about: `<p>Two refinements turn good predictions into reference-grade ones. First, nonadditive three-body forces: the energy of three molecules differs from the sum of their pair energies. They enter the third virial coefficient <i>C</i> and every property of dense fluids. Second, quantum effects: light atoms at low temperature are smeared out over a thermal de Broglie wavelength comparable to their size.</p><p>Hellmann developed a virial formalism for nonadditive potentials (2011), computed three-body potentials for argon and CO₂, and built virial equations of state up to the eighth coefficient. With Giovanni Garberoglio he uses path-integral Monte Carlo to include quantum effects exactly.</p><p>The high-order coefficients are integrals over many molecules at once; they are computed with Mayer-sampling Monte Carlo (Singh &amp; Kofke), a weighted sampling of the cluster integrals relative to a hard-sphere reference.</p>`,
   sketch(g) {
     sv('polygon', { points: '60,110 140,110 100,40', fill: 'none', class: 'ar', 'stroke-width': 3, 'stroke-dasharray': '5 5' }, g);
     sketchAtoms(g, [[60, 110, 13, 'ar'], [140, 110, 13, 'ar'], [100, 40, 13, 'ar']]);
@@ -2251,11 +2253,7 @@ CH.push({
     { a: 'Jäger, Hellmann, Bich, Vogel', y: 2011, t: 'Ab initio virial equation of state for argon using a new nonadditive three-body potential', j: 'J. Chem. Phys. 135, 084308', doi: '10.1063/1.3627151', why: 'Pressures within the ±0.02 % experimental uncertainty up to 12 MPa (supercritical, near room temperature).' },
     { a: 'Hellmann', y: 2017, t: 'Nonadditive three-body potential and third to eighth virial coefficients of carbon dioxide', j: 'J. Chem. Phys. 146, 054302', doi: '10.1063/1.4974995', why: 'When theory starts auditing the reference equation of state.' },
     { a: 'Ströker, Hellmann, Meier', y: 2022, t: 'Thermodynamic properties of argon from Monte Carlo simulations using ab initio potentials', j: 'Phys. Rev. E 105, 064129', doi: '10.1103/PhysRevE.105.064129', why: 'Dense argon from first principles, nearly within experimental uncertainty.' },
-    { a: 'Hellmann, Garberoglio', y: 2026, t: 'Third and fourth density and acoustic virial coefficients of neon from first-principles calculations', j: 'J. Chem. Phys. 164, 124302', doi: '10.1063/5.0324867', why: 'Path-integral Monte Carlo for neon, 10 K to 5000 K.' },
-    { a: 'Crusius', y: 2016, t: 'Berechnung von ab initio-Wechselwirkungspotentialen und thermophysikalischen Eigenschaften für Ethylenoxid, Distickstoffmonoxid und Argon (PhD thesis)', j: 'Universität Rostock (RosDok)', why: 'First many-particle Monte Carlo of argon with ab initio pair and three-body potentials.' },
-    { a: 'Ströker, Hellmann, Meier', y: 2021, t: 'Systematic formulation of thermodynamic properties in the NpT ensemble', j: 'Phys. Rev. E 103, 023305', doi: '10.1103/PhysRevE.103.023305', why: 'The formulas behind the dense-fluid simulations.' },
-    { a: 'Ströker, Meier', y: 2024, t: 'Vapor–liquid equilibrium and thermodynamic properties of saturated argon and krypton from Monte Carlo simulations using ab initio potentials', j: 'J. Chem. Phys. 160, 094503', doi: '10.1063/5.0196466', why: 'The boiling curve from first principles.' },
-    { a: 'Marienhagen, Meier', y: 2024, t: 'Calculation of thermodynamic properties of helium using path integral Monte Carlo simulations in the NpT ensemble and ab initio potentials', j: 'J. Chem. Phys. 161, 224110', doi: '10.1063/5.0243210' }
+    { a: 'Hellmann, Garberoglio', y: 2026, t: 'Third and fourth density and acoustic virial coefficients of neon from first-principles calculations', j: 'J. Chem. Phys. 164, 124302', doi: '10.1063/5.0324867', why: 'Path-integral Monte Carlo for neon, 10 K to 5000 K.' }
   ],
   beats: [
     Object.assign(introBeat(6, 'Crowds and quantum blur', 'Three is not one pair plus two more.\nAnd at low temperature, atoms are not points.', (S, g) => {
@@ -2364,7 +2362,7 @@ CH.push({
           S._ro2.innerHTML = f > 0.02 ? '<tspan class="f-rep">pushes the trio apart</tspan>' : f < -0.02 ? '<tspan class="f-att">pulls the trio together</tspan>' : 'almost no effect';
         };
         S._set3(750, 347);
-        S.text(110, 880, 'Axilrod–Teller–Muto term ∝ (1 + 3 cos γ₁ cos γ₂ cos γ₃)/(' + it('R') + sb('12') + it('R') + sb('13') + it('R') + sb('23') + ')³, in relative units; colour intensity grows with size.', { size: 21, cls: 'muted' });
+        S.text(110, 880, 'Axilrod–Teller–Muto term ∝ (1 + 3 cos ' + it('θ') + '₁ cos ' + it('θ') + '₂ cos ' + it('θ') + '₃)/(' + it('R') + sb('12') + it('R') + sb('13') + it('R') + sb('23') + ')³, in relative units; colour intensity grows with size.', { size: 21, cls: 'muted' });
       },
       explore: {
         title: 'Drag the orange atom (or click anywhere on the map). Arrow keys work too.',
@@ -2425,9 +2423,10 @@ CH.push({
       id: 'mayer-sampling', label: 'Integrating over many molecules',
       scene(S) {
         S.text(110, 100, 'How do you integrate over eight molecules?', { size: 46, cls: 't-disp' });
-        S.text(110, 180, it('B') + sb('3') + ' = −⅓ ∫∫ ' + it('f') + sb('12') + it('f') + sb('13') + it('f') + sb('23') + ' d' + it('R') + sb('2') + ' d' + it('R') + sb('3') + ',   ' + it('f') + sb('ij') + ' = exp(−' + it('V') + sb('ij') + '/' + it('k') + sb('B') + it('T') + ') − 1', { size: 36, cls: 't-disp' });
+        S.text(110, 180, it('B') + sb('3') + ' = −⅓ ∫∫ ' + it('f') + sb('12') + it('f') + sb('13') + it('f') + sb('23') + ' d<tspan font-weight="700">' + it('R') + '</tspan>' + sb('2') + ' d<tspan font-weight="700">' + it('R') + '</tspan>' + sb('3') + ',   ' + it('f') + sb('ij') + ' = exp(−' + it('V') + sb('ij') + '/(' + it('k') + sb('B') + it('T') + ')) − 1', { size: 36, cls: 't-disp' });
+        S.text(110, 222, '(pair potentials only; with three-body forces an extra term appears, Hellmann & Bich 2011)', { size: 20, cls: 'muted' });
         const dims = [['B₂', 3], ['B₃', 6], ['B₄', 9], ['B₆', 15], ['B₈', 21]];
-        S._dims = dims.map(([b, d], k) => { const g = S.group({ hide: 1 }); S.place(g, 110 + k * 200, 250); S.card(0, 0, 180, 150, { parent: g }); S.text(90, 60, b, { size: 40, anchor: 'middle', cls: 't-disp', parent: g }); S.text(90, 115, d + ' dims', { size: 24, anchor: 'middle', cls: 't-mono muted', parent: g }); return g; });
+        S._dims = dims.map(([b, d], k) => { const g = S.group({ hide: 1 }); S.place(g, 110 + k * 200, 250); S.card(0, 0, 180, 150, { parent: g }); S.text(90, 60, b, { size: 40, anchor: 'middle', cls: 't-disp', italic: 1, parent: g }); S.text(90, 115, d + ' dims', { size: 24, anchor: 'middle', cls: 't-mono muted', parent: g }); return g; });
         S._grid = S.para(1130, 290, 'grid with 10 points per axis:\n' + it('B') + sb('8') + ' needs 10²¹ evaluations', { size: 26, hide: 1 });
         S._plain = S.group({ hide: 1 }); S.place(S._plain, 110, 470);
         S.card(0, 0, 660, 330, { parent: S._plain });
@@ -2436,7 +2435,7 @@ CH.push({
         S._ms = S.group({ hide: 1 }); S.place(S._ms, 830, 470);
         S.card(0, 0, 660, 330, { parent: S._ms });
         S.text(30, 50, 'Mayer sampling (Singh & Kofke 2004)', { size: 28, weight: 600, cls: 'f-he', parent: S._ms });
-        S.para(30, 100, 'a random walk visits configurations Γ with weight\n' + it('π') + ' = |' + it('γ') + '|, then divides by a hard-sphere\nreference whose ' + it('B') + sb('n') + ' is known exactly:', { size: 24, parent: S._ms });
+        S.para(30, 100, 'a random walk visits configurations Γ with weight\n' + it('π') + ' = |' + it('γ') + '|, then divides by a hard-sphere reference\nwhose ' + it('B') + sb('n') + ' is known very precisely (exactly up to ' + it('B') + sb('4') + '):', { size: 24, parent: S._ms });
         S.text(30, 250, it('B') + sb('n') + ' = ' + it('B') + sb('n') + sp('HS') + ' · ⟨' + it('γ') + '/' + it('π') + '⟩' + sb('π') + ' / ⟨' + it('γ') + sb('HS') + '/' + it('π') + '⟩' + sb('π'), { size: 34, cls: 't-disp', parent: S._ms });
         S._an = S.text(110, 870, 'Like measuring a lake by walking mostly near the water, and comparing with a pond of known size.', { size: 24, cls: 'muted', italic: 1, hide: 1 });
       },
@@ -2444,10 +2443,10 @@ CH.push({
         ['Each virial coefficient is an integral over all positions of several molecules at once. For three atoms, that is six dimensions.', S => { S.fadeIn(S._dims[0]); S.fadeIn(S._dims[1]); }],
         ['For the eighth coefficient it is twenty-one, and for rigid molecules many more. A grid with just ten points per axis would need ten to the power twenty-one evaluations.', S => { S._dims.slice(2).forEach(d => S.fadeIn(d)); S.fadeIn(S._grid); }],
         ['Plain random sampling fails too. The molecules almost always land far apart, where the integrand is practically zero.', S => S.fadeIn(S._plain)],
-        ['The way out is weighted sampling, the same idea as Boltzmann-weighted Monte Carlo for the partition function.', S => S.fadeIn(S._ms)],
+        ['The way out is weighted sampling, as in Boltzmann-weighted Monte Carlo. And, as in a free-energy calculation, the answer comes out as a ratio to a reference system whose value is known.', S => S.fadeIn(S._ms)],
         ['A random walk visits configurations in proportion to the size of the integrand itself, so it spends its time where the integral is made.'],
         ['The unknown normalisation cancels by comparing, along the same walk, with hard spheres, whose coefficient is known exactly. Like measuring a lake by walking mostly near the water, and comparing with a pond of known size.', S => S.fadeIn(S._an)],
-        ['This Mayer-sampling method, by Singh and Kofke, is how Hellmann computed virial coefficients up to the eighth for carbon dioxide, krypton and methane.']
+        ['This Mayer-sampling method, by Singh and Kofke, is how Hellmann and co-workers computed virial coefficients up to the eighth for carbon dioxide, krypton and methane.']
       ]
     },
     {
@@ -2565,6 +2564,77 @@ CH.push({
         ]
       }
     },
+    achievedBeat([
+      { big: '±0.02 %', t: 'Argon pressures within the ±0.02 % experimental\nuncertainty up to 12 MPa, from theory alone', src: 'Jäger, Hellmann, Bich, Vogel, J. Chem. Phys. 135, 084308 (2011)', say: 'For argon, an equation of state built only from theory matched the best measured pressures within their uncertainty of two hundredths of a percent.', c: 'ar' },
+      { big: '8th', t: 'Virial coefficients up to the eighth for CO₂,\nkrypton and methane; for CO₂, auditing the reference', src: 'J. Chem. Phys. 2017, 2019; J. Phys. Chem. B 2022', say: 'For carbon dioxide, krypton and methane he went to the eighth coefficient, and for carbon dioxide found where the official reference equation goes wrong.', c: 'xe' },
+      { big: 'exact', t: 'Quantum effects via path integrals for neon,\nnitrogen and oxygen (with Garberoglio, Harvey)', src: 'J. Chem. Phys. 164, 124302 (2026); arXiv 2607.24634', say: 'And with path-integral methods, quantum effects are included exactly, for neon and for the gases of air.', c: 'he' }
+    ]),
+    wrapBeat([
+      ['Three molecules ≠ three pairs: the three-body\nterm matters in dense gases and liquids.', 'Three molecules are not three pairs. The three-body term matters in dense gases and liquids.'],
+      ['Its sign depends on shape: repulsive for compact\ntriangles, attractive for lines.', 'Its sign depends on shape: repulsive for compact triangles, attractive for lines.'],
+      ['Light atoms at low temperature are blurred over\n' + it('Λ') + ' = ' + it('h') + '/√(2π' + it('m') + it('k') + sb('B') + it('T') + '); path integrals handle it exactly.', 'Light, cold atoms are blurred over their thermal wavelength. Path integrals handle that exactly.'],
+      ['With both, theory reaches experimental accuracy,\nand can audit reference equations.', 'With both refinements, theory reaches experimental accuracy and can audit reference equations.']
+    ]),
+    finishBeat()
+  ]
+});
+
+/* =========================================================
+   CHAPTER 7 · Dense fluids and the phase diagram
+   ========================================================= */
+CH.push({
+  id: 'fluids', n: 7, title: 'Dense fluids and the phase diagram', minutes: 10,
+  blurb: 'Where the virial series gives up, many-particle Monte Carlo takes over: dense, supercritical and boiling argon from first principles.',
+  about: `<p>The virial expansion is a series in density. It works superbly for gases but converges slowly or not at all at liquid-like densities. There, the same ab initio pair and three-body potentials are used directly in Monte Carlo simulations of hundreds or thousands of molecules.</p><p>J.-P. Crusius's 2016 thesis (Rostock, supervised by E. Hassel and K. Meier) was the first to simulate argon with the high-accuracy ab initio pair potential and the ab initio three-body potential of Jäger et al., showing that they also describe the dense, supercritical fluid beyond the reach of the virial equation. At HSU, Ströker, Hellmann and Meier then derived the formalism for all thermodynamic properties at constant pressure (2021) and obtained liquid and supercritical argon and krypton almost within experimental uncertainty (2022); Ströker and Meier added the saturation curve (2024), and Marienhagen and Meier supercritical helium by path integrals (2024).</p>`,
+  sketch(g) {
+    sv('path', { d: 'M40 125 C 120 118, 180 90, 230 45', fill: 'none', class: 'ar', 'stroke-width': 4 }, g);
+    sv('circle', { cx: 230, cy: 45, r: 7, class: 'f-ar' }, g);
+    sv('rect', { x: 230, y: 12, width: 80, height: 33, class: 'f-he', opacity: .25 }, g);
+    sv('text', { x: 300, y: 34, 'text-anchor': 'end', 'font-size': 14, class: 'f-he t-mono', text: 'supercritical' }, g);
+  },
+  papers: [
+    { a: 'Crusius', y: 2016, t: 'Berechnung von ab initio-Wechselwirkungspotentialen und thermophysikalischen Eigenschaften für Ethylenoxid, Distickstoffmonoxid und Argon (PhD thesis)', j: 'Universität Rostock (RosDok)', why: 'Dense and supercritical argon from ab initio pair and three-body potentials, beyond the virial series.' },
+    { a: 'Ströker, Hellmann, Meier', y: 2021, t: 'Systematic formulation of thermodynamic properties in the NpT ensemble', j: 'Phys. Rev. E 103, 023305', doi: '10.1103/PhysRevE.103.023305', why: 'The formulas behind the dense-fluid simulations.' },
+    { a: 'Ströker, Hellmann, Meier', y: 2022, t: 'Thermodynamic properties of argon from Monte Carlo simulations using ab initio potentials', j: 'Phys. Rev. E 105, 064129', doi: '10.1103/PhysRevE.105.064129', why: 'Liquid and supercritical argon, almost within experimental uncertainty.' },
+    { a: 'Ströker, Hellmann, Meier', y: 2022, t: 'Thermodynamic properties of krypton from Monte Carlo simulations using ab initio potentials', j: 'J. Chem. Phys. 157, 114504', doi: '10.1063/5.0107851' },
+    { a: 'Ströker, Meier', y: 2024, t: 'Vapor–liquid equilibrium and thermodynamic properties of saturated argon and krypton from Monte Carlo simulations using ab initio potentials', j: 'J. Chem. Phys. 160, 094503', doi: '10.1063/5.0196466', why: 'The boiling curve from first principles.' },
+    { a: 'Marienhagen, Meier', y: 2024, t: 'Calculation of thermodynamic properties of helium using path integral Monte Carlo simulations in the NpT ensemble and ab initio potentials', j: 'J. Chem. Phys. 161, 224110', doi: '10.1063/5.0243210' }
+  ],
+  beats: [
+    Object.assign(introBeat(7, 'Dense fluids and the phase diagram', 'Where the virial series gives up,\nmany-particle simulation takes over.', (S, g) => {
+      for (let k = 0; k < 18; k++) S.atom(1040 + (k % 6) * 66 + (Math.floor(k / 6) % 2) * 33, 560 + Math.floor(k / 6) * 58, 26, 'ar', { parent: g });
+    }), {
+      lines: [
+        ['Chapter seven. Dense fluids and the phase diagram.'],
+        ['So far, pairs and triples were enough. Now we pack the molecules close together, as in a liquid or a supercritical fluid.']
+      ]
+    }),
+    {
+      id: 'virial-limit', label: 'Where the series gives up',
+      scene(S) {
+        S.text(110, 100, 'Where the virial series gives up', { size: 46, cls: 't-disp' });
+        const A = S.axes({ x: 200, y: 170, w: 860, h: 560 }, { xr: [0, 35], yr: [0, 2], xt: [0, 5, 10, 15, 20, 25, 30, 35], yt: [0, 0.5, 1, 1.5, 2], xl: 'density ' + it('ρ') + sb('m') + ' / (mol/L)', yl: it('Z'), yfmt: v => v.toFixed(1) });
+        S._A = A;
+        const ex = r => 1 - 0.035 * r + 0.0018 * r * r + 0.0000016 * Math.pow(r, 4);
+        S._ok = S.rect(A.X(0), A.Y(2), A.X(13.4) - A.X(0), A.Y(0) - A.Y(2), { class: 'f-good', opacity: .08, hide: 1 });
+        S._bad = S.rect(A.X(13.4), A.Y(2), A.X(35) - A.X(13.4), A.Y(0) - A.Y(2), { class: 'f-rep', opacity: .06, hide: 1 });
+        S._okT = S.text(A.X(1), A.Y(1.85), 'series converges well', { size: 24, cls: 'f-good', hide: 1 });
+        S._badT = S.text(A.X(14.5), A.Y(1.85), 'liquid-like densities: simulate', { size: 24, cls: 'f-rep', hide: 1 });
+        S._exact = S.path(S.curve(ex, 0, 35, A.X, A.Y, 200), { cls: 'ink', w: 6, hide: 1 });
+        const trunc = [[r => 1 - 0.035 * r, 'kr', 'B only'], [r => 1 - 0.035 * r + 0.0018 * r * r, 'ar', 'B + C'], [r => 1 - 0.035 * r + 0.0018 * r * r - 0.0000040 * Math.pow(r, 3) + 0.0000030 * Math.pow(r, 4) - 0.00000010 * Math.pow(r, 5), 'he', 'up to higher orders']];
+        S._tr = trunc.map(([fn, c, lab], k) => { const p = S.path(S.curve(fn, 0, 35, A.X, A.Y, 200, [0, 2]), { cls: c, w: 4, 'stroke-dasharray': '10 7', hide: 1 }); return p; });
+        S._leg = S.group({ hide: 1 });
+        [['ink', 'real fluid (simulation)', 6, ''], ['kr', 'virial series: B only', 4, '10 7'], ['ar', 'B + C', 4, '10 7'], ['he', 'more terms', 4, '10 7']].forEach(([c, t, w, da], k) => { S.line(1110, 260 + k * 50, 1170, 260 + k * 50, { w, cls: c, 'stroke-dasharray': da || null, parent: S._leg }); S.text(1185, 268 + k * 50, t, { size: 24, parent: S._leg }); });
+        S._crit = S.group({ hide: 1 }); S.line(A.X(13.4), A.Y(0), A.X(13.4), A.Y(2), { w: 2, cls: 'muted', style: 'stroke:var(--ink-2)', 'stroke-dasharray': '4 6', parent: S._crit }); S.text(A.X(13.4) + 8, A.Y(0.1), 'critical density of argon', { size: 20, cls: 'muted', parent: S._crit });
+        S.text(200, 880, 'Schematic: a supercritical isotherm of argon. Real convergence depends on temperature; at liquid densities the series is of little use.', { size: 20, cls: 'muted' });
+      },
+      lines: [
+        ['The virial equation is a series in density: one correction from pairs, the next from triples, and so on.', S => S.drawOn(S._exact, 1200)],
+        ['In a gas, a few terms are enough. The series hugs the real curve.', S => { S.fadeIn([S._ok, S._okT, S._leg]); S.drawOn(S._tr[0], 800); return S.drawOn(S._tr[1], 900); }],
+        ['But as the density approaches that of a liquid, adding terms stops helping. The series converges slowly, or not at all.', S => { S.fadeIn([S._bad, S._badT, S._crit]); return S.drawOn(S._tr[2], 1200); }],
+        ['There, the only way forward is to simulate the fluid itself: hundreds or thousands of molecules, interacting through the same ab initio pair and three-body potentials.']
+      ]
+    },
     {
       id: 'dense', label: 'Dense fluids',
       scene(S) {
@@ -2591,8 +2661,8 @@ CH.push({
         requestAnimationFrame(step);
       },
       lines: [
-        ['Finally, the same potentials can drive simulations of dense fluids, with thousands of atoms.', S => S.fadeIn(S._t)],
-        ['With the Hamburg group of Karsten Meier, Hellmann ran Monte Carlo simulations of argon using ab initio potentials.'],
+        ['Here is what that looks like: a Monte Carlo simulation, with every move accepted or rejected according to the ab initio energies.', S => S.fadeIn(S._t)],
+        ['At H S U Hamburg, Philipp Ströker and Karsten Meier, with Hellmann, ran Monte Carlo simulations of argon using ab initio potentials.'],
         ['The computed density and speed of sound match the best experiments almost within their uncertainty.', S => S.fadeIn(S._r1)],
         ['For krypton, agreement came only once both three-body forces and quantum effects were included. Both refinements of this chapter really matter.', S => S.fadeIn(S._r2)]
       ]
@@ -2613,23 +2683,23 @@ CH.push({
         S._lab = S.group({ hide: 1 });
         S.text(A.X(100), A.Y(1.2), 'liquid', { size: 28, parent: S._lab }); S.text(A.X(200), A.Y(-0.9), 'gas', { size: 28, parent: S._lab }); S.text(A.X(195), A.Y(1.6), 'supercritical', { size: 28, cls: 'f-he', parent: S._lab }); S.text(A.X(73), A.Y(1.7), 'solid', { size: 24, cls: 'muted', parent: S._lab });
         const rows = [
-          ['2016', 'Crusius (PhD thesis): first many-particle\nMonte Carlo of argon with ab initio potentials'],
+          ['2016', 'Crusius (PhD thesis, Rostock): dense and supercritical\nargon from the ab initio pair and three-body\npotentials of Jäger et al., beyond the virial series'],
           ['2021', 'Ströker, Hellmann, Meier: formulas for all\nproperties at constant pressure'],
           ['2022', 'argon and krypton, liquid and supercritical:\ndensity and sound speed ≈ experiment'],
           ['2024', 'saturation curve of argon and krypton;\nsupercritical helium by path integrals']
         ];
-        S._rows = rows.map(([y, t], k) => { const g = S.group({ hide: 1 }); S.place(g, 1010, 200 + k * 150); S.text(0, 0, y, { size: 30, cls: 't-mono f-he', parent: g }); S.para(0, 40, t, { size: 21, parent: g }); return g; });
+        S._rows = rows.map(([y, t], k) => { const g = S.group({ hide: 1 }); S.place(g, 1010, 200 + k * 150); S.text(0, 0, y, { size: 30, cls: 't-mono f-he', parent: g }); S.para(0, 38, t, { size: 20, parent: g }); return g; });
         S.text(200, 880, 'Argon: real triple and critical points; vapour-pressure curve drawn with a simple two-point fit, melting line schematic.', { size: 20, cls: 'muted' });
       },
       lines: [
         ['So far, the pair and three-body potentials have given us gases. Can they also give a whole phase diagram?'],
         ['Here is argon. Below the boiling curve it is a gas, above it a liquid.', S => { S.fadeIn(S._lab); S.fadeIn(S._melt); return S.drawOn(S._vap, 1200); }],
         ['The curve ends at the critical point, about a hundred and fifty-one kelvin and five megapascals. Beyond it, gas and liquid can no longer be told apart: the supercritical region.', S => { S.fadeIn(S._cp); S.fadeIn(S._tp); S.fadeIn(S._sc); }],
-        ['In 2016, Johann-Philipp Crusius, in his doctoral thesis supervised by Egon Hassel and Karsten Meier, simulated many argon atoms with ab initio pair and three-body potentials. The results mostly fell within the uncertainty of the reference equation of state.', S => S.fadeIn(S._rows[0])],
+        ['In 2016, Johann-Philipp Crusius, in his doctoral thesis at the University of Rostock supervised by Egon Hassel and Karsten Meier, simulated many argon atoms using, for the first time, a high-accuracy ab initio pair potential together with an ab initio three-body potential. It showed that these potentials also describe the dense, supercritical fluid, where the virial equation fails, mostly within the uncertainty of the reference equation of state.', S => S.fadeIn(S._rows[0])],
         ['In 2021, Ströker, Hellmann and Meier derived compact formulas for every thermodynamic property in simulations at constant pressure.', S => S.fadeIn(S._rows[1])],
         ['With them, the liquid and supercritical states of argon and krypton came out almost within experimental uncertainty.', S => S.fadeIn(S._rows[2])],
-        ['And in 2024, the Hamburg group traced the boiling curve itself, and simulated supercritical helium with path integrals. Theory now reaches across the whole phase diagram.', S => S.fadeIn(S._rows[3])],
-        ['One lesson from other groups as well: with pair potentials alone, the critical point comes out too hot. The three-body forces fix it.']
+        ['And in 2024, the Hamburg group traced the boiling curve itself, and simulated supercritical helium with path integrals. Theory now covers the gas, the liquid, the supercritical fluid and the boiling curve between them.', S => S.fadeIn(S._rows[3])],
+        ['Other groups found that with pair potentials alone the critical point comes out too hot and the vapour pressure too low. Adding three-body forces removes much of that error.']
       ]
     },
     {
@@ -2643,9 +2713,9 @@ CH.push({
         S._c = P.map(p => S.circle(ox + p[0] * px, oy + p[1] * px, px * .5, { class: 'f-ar', opacity: .85 }));
         S._T = 0.9; S._ro = S.text(860, 230, '', { size: 30, cls: 't-mono' }); S._ro2 = S.text(860, 280, '', { size: 26 });
         const e = (i, x, y) => { let u = 0; for (let j = 0; j < N; j++) { if (j === i) continue; let dx = x - P[j][0], dy = y - P[j][1]; dx -= Lb * Math.round(dx / Lb); dy -= Lb * Math.round(dy / Lb); const r2 = dx * dx + dy * dy; if (r2 < 6.25) { const r6 = 1 / (r2 * r2 * r2); u += 4 * (r6 * r6 - r6); } } return u; };
-        S._set = T => { S._T = T; S._ro.innerHTML = it('T') + '* = ' + T.toFixed(2); S._ro2.innerHTML = T < 0.43 ? 'below the critical temperature: droplets form' : T < 0.5 ? 'near the critical point: large fluctuations' : 'above the critical temperature: one homogeneous fluid'; };
+        S._set = T => { S._T = T; S._ro.innerHTML = it('T') + '* = ' + T.toFixed(2); S._ro2.innerHTML = T < 0.41 ? 'below the triple point: solid-like clusters' : T < 0.46 ? 'below the critical temperature: liquid droplets in vapour' : T < 0.52 ? 'near the critical point: large fluctuations' : 'above the critical temperature: one homogeneous fluid'; };
         S._set(0.9);
-        S.para(860, 380, 'Two-dimensional Lennard-Jones toy model,\nMetropolis Monte Carlo, 110 particles.\nIts critical temperature is about ' + it('T') + '* ≈ 0.46.', { size: 24, cls: 'muted' });
+        S.para(860, 380, 'Two-dimensional Lennard-Jones toy model,\nMetropolis Monte Carlo, 110 particles,\ncut-off 2.5' + it('σ') + ': ' + it('T') + '*' + sb('c') + ' ≈ 0.46, triple point ≈ 0.41.\n(The 3D Lennard-Jones fluid has ' + it('T') + '*' + sb('c') + ' ≈ 1.3.)', { size: 24, cls: 'muted' });
         const gen = S.gen;
         const loop = () => {
           if (gen !== S.gen) return;
@@ -2664,36 +2734,37 @@ CH.push({
         title: 'Cool the fluid below the critical temperature and give it a few seconds.',
         build(S, body, slider) {
           slider(body, { id: 'T6p', label: 'temperature <i>T</i>* (reduced)', min: 0.3, max: 1.2, step: 0.01, value: 0.9, show: v => v.toFixed(2), onInput: v => S._set(v) });
-          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'Below about 0.46 the particles gather into droplets surrounded by vapour: two phases. Above it they stay spread out, however long you wait. That is the supercritical fluid.' }));
+          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'Between about 0.41 and 0.46 the particles gather into liquid droplets surrounded by vapour: two phases. Below about 0.41 the clusters freeze. Above 0.46 they stay spread out, however long you wait: the supercritical fluid.' }));
         }
       },
       lines: [['Try it with a toy model: cool the fluid and watch droplets appear.']]
     },
     achievedBeat([
-      { big: '±0.02 %', t: 'Argon pressures within the ±0.02 % experimental\nuncertainty up to 12 MPa, from theory alone', src: 'Jäger, Hellmann, Bich, Vogel, J. Chem. Phys. 135, 084308 (2011)', say: 'For argon, an equation of state built only from theory matched the best measured pressures within their uncertainty of two hundredths of a percent.', c: 'ar' },
-      { big: '8th', t: 'Virial coefficients up to the eighth for CO₂,\nkrypton and methane; for CO₂, auditing the reference', src: 'J. Chem. Phys. 2017, 2019; J. Phys. Chem. B 2022', say: 'For carbon dioxide, krypton and methane he went to the eighth coefficient, and for carbon dioxide found where the official reference equation goes wrong.', c: 'xe' },
-      { big: 'exact', t: 'Quantum effects via path integrals for neon,\nnitrogen and oxygen (with Garberoglio, Harvey)', src: 'J. Chem. Phys. 164, 124302 (2026); arXiv 2607.24634', say: 'And with path-integral methods, quantum effects are included exactly, for neon and for the gases of air.', c: 'he' }
-    ]),
+      { big: '2016', t: 'Crusius (thesis): dense and supercritical argon\nfrom ab initio pair + three-body potentials', src: 'Universität Rostock (RosDok), supervised by Hassel and Meier', say: 'In 2016, a thesis showed that these potentials carry over to the dense, supercritical fluid, beyond the reach of the virial series.', c: 'ar' },
+      { big: '≈ exp.', t: 'Liquid and supercritical argon and krypton almost\nwithin experimental uncertainty (2022)', src: 'Ströker, Hellmann, Meier, Phys. Rev. E 105, 064129; J. Chem. Phys. 157, 114504', say: 'At H S U, liquid and supercritical argon and krypton came out almost within experimental uncertainty.', c: 'kr' },
+      { big: 'boiling', t: 'Saturation curve of argon and krypton (2024);\nsupercritical helium by path integrals', src: 'Ströker & Meier; Marienhagen & Meier, J. Chem. Phys. 160 and 161 (2024)', say: 'And the Hamburg group traced the boiling curve itself.', c: 'he' }
+    ], 'What these potentials achieved here'),
     wrapBeat([
-      ['Three molecules ≠ three pairs: the three-body\nterm matters in dense gases and liquids.', 'Three molecules are not three pairs. The three-body term matters in dense gases and liquids.'],
-      ['Its sign depends on shape: repulsive for compact\ntriangles, attractive for lines.', 'Its sign depends on shape: repulsive for compact triangles, attractive for lines.'],
-      ['Light atoms at low temperature are blurred over\n' + it('Λ') + ' = ' + it('h') + '/√(2π' + it('m') + it('k') + sb('B') + it('T') + '); path integrals handle it exactly.', 'Light, cold atoms are blurred over their thermal wavelength. Path integrals handle that exactly.'],
-      ['With both, theory reaches experimental accuracy,\nand can audit reference equations.', 'With both refinements, theory reaches experimental accuracy and can audit reference equations.']
+      ['The virial series works for gases but gives up\nat liquid-like densities.', 'The virial series works for gases but gives up at liquid-like densities.'],
+      ['There, Monte Carlo simulates the fluid directly,\nwith the same ab initio potentials.', 'There, Monte Carlo simulates the fluid directly, with the same ab initio potentials.'],
+      ['Three-body forces and quantum corrections are\nneeded for experimental accuracy.', 'Three-body forces and quantum corrections are needed for experimental accuracy.'],
+      ['Gas, liquid, supercritical fluid and the boiling\ncurve now follow from first principles.', 'Gas, liquid, supercritical fluid and the boiling curve now follow from first principles.']
     ]),
     finishBeat()
   ]
 });
+
 </script>
 <script>
 /* =========================================================
-   CHAPTER 7 · How gases flow and carry heat
+   CHAPTER 8 · How gases flow and carry heat
    ========================================================= */
 /* Chapman–Enskog viscosity of a Lennard-Jones gas (Neufeld fit for Ω(2,2)*), argon parameters from viscosity data */
 const LJV = { eps: 93.3, sig: 0.3542, M: 39.948 };
 const omega22 = Ts => 1.16145 * Math.pow(Ts, -0.14874) + 0.52487 * Math.exp(-0.77320 * Ts) + 2.16178 * Math.exp(-2.43787 * Ts);
 const etaAr = T => 2.669e-6 * Math.sqrt(LJV.M * T) / (Math.pow(LJV.sig * 10, 2) * omega22(T / LJV.eps)) * 1e6 / 10 * 10; // µPa·s
 CH.push({
-  id: 'transport', n: 7, title: 'How gases flow and carry heat', minutes: 12,
+  id: 'transport', n: 8, title: 'How gases flow and carry heat', minutes: 12,
   blurb: 'Viscosity and heat conduction come from collisions. Fire molecules at each other and watch where they go.',
   about: `<p>Transport properties (viscosity <i>η</i>, thermal conductivity <i>λ</i>, diffusion coefficient <i>D</i>) describe how a gas carries momentum, energy and matter. In a dilute gas they are fixed by how molecules are deflected in two-body collisions. Kinetic theory (Chapman–Enskog) turns the statistics of those deflections into the transport coefficients.</p><p>For atoms this is a classic calculation. For rotating molecules Hellmann and co-workers simulate millions of individual collisions (the classical trajectory method) and evaluate a generalised kinetic theory. Their codes cover linear, symmetric-top and asymmetric-top molecules such as N₂, CO₂, CH₄ and H₂O, and their mixtures.</p><p>The collision simulator on stage integrates Newton's equations for a Lennard-Jones pair in reduced units.</p>`,
   sketch(g) {
@@ -2709,13 +2780,13 @@ CH.push({
     { a: 'Huber, Perkins, Friend, Sengers, Assael, Metaxa, Miyagawa, Hellmann, Vogel', y: 2012, t: 'New international formulation for the thermal conductivity of H₂O', j: 'J. Phys. Chem. Ref. Data 41, 033102', doi: '10.1063/1.4738955', why: 'The IAPWS standard; calculated dilute-gas values by Hellmann and co-workers fill gaps in the data.' }
   ],
   beats: [
-    Object.assign(introBeat(7, 'How gases flow and carry heat', 'Viscosity and heat conduction are collision statistics.\nThe other branch of rung three: kinetic theory.', (S, g) => {
+    Object.assign(introBeat(8, 'How gases flow and carry heat', 'Viscosity and heat conduction are collision statistics.\nThe other branch of rung three: kinetic theory.', (S, g) => {
       const t = PHYS.trajectory(0.9, 1.2);
       S._ip = S.path(t.pts.map(([x, y], k) => (k ? 'L' : 'M') + (1180 + x * 60).toFixed(1) + ',' + (650 - y * 60).toFixed(1)).join(''), { cls: 'xe', w: 4, parent: g, opacity: 0 });
       S.atom(1180, 650, 26, 'ar', { parent: g });
     }), {
       lines: [
-        ['Chapter seven. How gases flow and carry heat.', S => S.drawOn(S._ip, 1600)],
+        ['Chapter eight. How gases flow and carry heat.', S => S.drawOn(S._ip, 1600)],
         ['Pressure was one branch of rung three. Now the other branch: how a gas resists flow, conducts heat and mixes.']
       ]
     }),
@@ -2770,7 +2841,7 @@ CH.push({
         S._A = A;
         S._c = S.path(S.curve(etaAr, 100, 1000, A.X, A.Y, 200), { cls: 'ar', w: 6, hide: 1 });
         S._q = S.text(A.X(550), A.Y(30), '?', { size: 120, cls: 't-disp muted', anchor: 'middle' });
-        S.text(170, 880, 'Argon, Chapman–Enskog theory with a Lennard-Jones model (' + it('ε') + '/' + it('k') + sb('B') + ' = 93.3 K, ' + it('σ') + ' = 0.3542 nm).', { size: 21, cls: 'muted' });
+        S.text(170, 880, 'Argon, Chapman–Enskog with effective Lennard-Jones parameters fitted to viscosity (' + it('ε') + '/' + it('k') + sb('B') + ' = 93.3 K, ' + it('σ') + ' = 0.3542 nm); the true well is ≈ 143 K.', { size: 21, cls: 'muted' });
       },
       lines: [['Quick check. Honey gets runnier when you heat it. What about a gas?']],
       ask: {
@@ -2816,7 +2887,7 @@ CH.push({
       lines: [
         ['To understand transport, zoom in on a single collision. A molecule flies past a partner at some sideways offset, the impact parameter b.', S => S._fire(2.4, 1, 2000)],
         ['A distant pass: the partner’s attraction bends the path slightly inward.'],
-        ['Closer: the attraction swings it round sharply.', S => S._fire(1.45, 1, 2400)],
+        ['Closer: the attraction swings it round sharply.', S => S._fire(1.6, 1, 2400)],
         ['Nearly head-on: the repulsive wall throws it back.', S => S._fire(0.3, 1, 2400)],
         ['The deflection angle, chi, depends on the impact parameter, the energy, and the shape of the pair potential. That is how the potential enters transport.']
       ]
@@ -2861,7 +2932,7 @@ CH.push({
         ['One collision tells us little. Each molecule has billions of collisions every second, at every offset and every speed.', async S => { for (const p of S._paths) { S.drawOn(p, 700); await S.wait(70); } }],
         ['Here is a spray of real computed trajectories, from head-on to glancing. Some bounce back, some are pulled round, the distant ones barely bend.'],
         ['Kinetic theory averages the deflections into a number called the collision integral. The viscosity follows from it directly.', S => S.fadeIn(S._eq)],
-        ['For atoms, that average is a straightforward integral. For spinning molecules there is no shortcut. the trajectory codes of Hellmann and co-workers simulate millions of collisions, at every orientation, and average them.', S => S.fadeIn(S._t)]
+        ['For atoms, that average is a straightforward integral. For spinning molecules there is no shortcut. The trajectory codes of Hellmann and co-workers simulate millions of collisions, at every orientation, and average them.', S => S.fadeIn(S._t)]
       ]
     },
     {
@@ -2975,11 +3046,11 @@ CH.push({
 });
 
 /* =========================================================
-   CHAPTER 8 · Gas as a ruler
+   CHAPTER 9 · Gas as a ruler
    ========================================================= */
 const soundSpeed = (gas, T) => Math.sqrt(5 / 3 * 8.314462618 * T / (GAS[gas].mass / 1000));   // ideal monatomic, m/s
 CH.push({
-  id: 'metrology', n: 8, title: 'Gas as a ruler', minutes: 11,
+  id: 'metrology', n: 9, title: 'Gas as a ruler', minutes: 11,
   blurb: 'Since 2019 the kelvin is defined by a constant of nature. Gas thermometers need exact gas properties, and theory supplies them.',
   about: `<p>Since 20 May 2019 the kelvin is defined by fixing the Boltzmann constant at exactly <i>k</i><sub>B</sub> = 1.380 649 × 10⁻²³ J/K. Primary thermometers measure temperature through a property of a gas: its speed of sound (acoustic gas thermometry), its dielectric constant (dielectric-constant gas thermometry) or its refractive index (refractive-index gas thermometry). Each needs real-gas corrections from theory: virial coefficients for all three; the polarizability of the atom for the dielectric and refractive methods; viscosity and thermal conductivity for the boundary-layer corrections of acoustic thermometry.</p><p>For helium, computed values now beat experiment by at least an order of magnitude (2023 review, co-authored by Hellmann). His own contributions centre on neon, argon, krypton, nitrogen and oxygen: potentials, virial coefficients and the polarizability of neon, often published together with experimental groups at PTB, INRiM and HSU.</p>`,
   sketch(g) {
@@ -2997,11 +3068,11 @@ CH.push({
     { a: 'Hellmann, Garberoglio', y: 2026, t: 'Third and fourth density and acoustic virial coefficients of neon from first-principles calculations', j: 'J. Chem. Phys. 164, 124302', doi: '10.1063/5.0324867' }
   ],
   beats: [
-    Object.assign(introBeat(8, 'Gas as a ruler', 'Since 2019, temperature is defined by a constant of nature.\nThe best thermometers are made of gas.', (S, g) => {
+    Object.assign(introBeat(9, 'Gas as a ruler', 'Since 2019, temperature is defined by a constant of nature.\nThe best thermometers are made of gas.', (S, g) => {
       S._rings = [0, 1, 2, 3].map(k => S.circle(1200, 650, 30 + k * 40, { fill: 'none', class: 'ne', 'stroke-width': 3, opacity: .6, parent: g }));
     }), {
       lines: [
-        ['Chapter eight. Gas as a ruler.'],
+        ['Chapter nine. Gas as a ruler.'],
         ['The most precise thermometers in the world are made of gas. And they depend on the numbers this course has been computing.']
       ]
     }),
@@ -3207,7 +3278,7 @@ CH.push({
 });
 
 /* =========================================================
-   CHAPTER 9 · Gases at work
+   CHAPTER 10 · Gases at work
    ========================================================= */
 const SPECIES = ['H₂O', 'CO₂', 'N₂', 'O₂', 'Ar', 'CH₄', 'C₂H₆', 'C₃H₈', 'H₂S', 'H₂', 'CO', 'SO₂'];
 const PAIRS = {   // category: g = natural gas, c = CCS, w = water/humid air, h = hydrogen
@@ -3220,7 +3291,7 @@ const CAT = { g: ['natural gas and sour gas', 'he'], c: ['carbon capture and sto
 const SELF = ['H₂O', 'CO₂', 'N₂', 'O₂', 'Ar', 'CH₄', 'C₂H₆', 'C₃H₈', 'H₂S'];
 const pairCat = (a, b) => PAIRS[a + '|' + b] || PAIRS[b + '|' + a];
 CH.push({
-  id: 'work', n: 9, title: 'Gases at work', minutes: 11,
+  id: 'work', n: 10, title: 'Gases at work', minutes: 11,
   blurb: 'Natural gas, carbon capture, humid air, hydrogen and even ice cores: the mixtures behind real technology.',
   about: `<p>Most real gases are mixtures. Their properties need the interaction of every <em>unlike</em> pair, which is often the hardest to measure: one partner may be toxic (H₂S), corrosive (SO₂) or explosive in combination (O₂ + H₂). Hellmann and co-workers have computed cross second virial coefficients for 27 unlike pairs, and dilute-gas transport properties for most of them, relevant to natural gas, carbon capture and storage, humid air and the hydrogen economy.</p><p>One spin-off reached climate science: with Allan Harvey (NIST) he computed how differently the isotopic forms of water diffuse through air, which matters for reading past climates from ice cores.</p>`,
   sketch(g) {
@@ -3237,11 +3308,11 @@ CH.push({
     { a: 'Hellmann, Bich', y: 2025, t: 'Cross second virial coefficients of the N₂–H₂, O₂–H₂ and CO₂–H₂ systems from first principles', j: 'Int. J. Thermophys. 46, 67', doi: '10.1007/s10765-025-03524-6', why: 'Hydrogen mixtures for the energy transition.' }
   ],
   beats: [
-    Object.assign(introBeat(9, 'Gases at work', 'Real gases are mixtures. The hardest pairs to measure\nare often the most important.', (S, g) => {
+    Object.assign(introBeat(10, 'Gases at work', 'Real gases are mixtures. The hardest pairs to measure\nare often the most important.', (S, g) => {
       [['he', 1050], ['xe', 1170], ['ar', 1290], ['good', 1410]].forEach(([c, x], k) => S.circle(x, 680 - (k % 2) * 60, 34, { class: 'f-' + c, opacity: .85, parent: g }));
     }), {
       lines: [
-        ['Chapter nine. Gases at work.'],
+        ['Chapter ten. Gases at work.'],
         ['Natural gas, flue gas, humid air, hydrogen blends: almost every gas in technology is a mixture.']
       ]
     }),
