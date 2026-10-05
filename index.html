@@ -328,9 +328,11 @@ const S = {
   }
 };
 
+/* stable id for a caption line (FNV-1a over UTF-16 code units) -> audio/<id>.m4a */
+function lineHash(t) { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
 /* ---------- narration: browser speech with timed fallback ---------- */
 const Narr = {
-  on: store.get('voice', false), rate: store.get('rate', 1), voice: null, ok: 'speechSynthesis' in window,
+  on: store.get('voice', true), rate: store.get('rate', 1), voice: null, ok: 'speechSynthesis' in window,
   init() {
     if (!this.ok) return;
     const pick = () => {
@@ -343,7 +345,27 @@ const Narr = {
     pick(); speechSynthesis.onvoiceschanged = pick;
   },
   readMs(text) { return (1100 + text.replace(/<[^>]+>/g, '').length * 62) / this.rate; },
+  /* pre-rendered narration (audio/<lineHash>.m4a) when available, else browser speech */
+  audio: null,
+  sayRecorded(h, ms) {
+    return new Promise(res => {
+      const a = this.audio || (this.audio = new Audio());
+      let done = false;
+      const fin = () => { if (!done) { done = true; clearTimeout(t); a.onended = a.onerror = null; res(); } };
+      a.onended = fin; a.onerror = () => { done = true; clearTimeout(t); res(this.on && this.ok ? 'fallback' : null); };
+      a.src = 'audio/' + h + '.m4a';
+      a.playbackRate = this.rate; try { a.preservesPitch = true; } catch (e) {}
+      const t = setTimeout(fin, ms * 3 + 6000);
+      P.cancelers.push(() => { try { a.pause(); } catch (e) {} fin(); });
+      const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (!done) { done = true; clearTimeout(t); res('blocked'); } });
+    });
+  },
   say(text) {
+    const h = lineHash(text);
+    if (this.on && typeof AUDIO !== 'undefined' && AUDIO.has(h)) return this.sayRecorded(h, this.readMs(text)).then(r => r === 'blocked' ? new Promise(ok => { const t = setTimeout(ok, this.readMs(text)); P.cancelers.push(() => { clearTimeout(t); ok(); }); }) : r === 'fallback' ? this.saySynth(text) : null);
+    return this.saySynth(text);
+  },
+  saySynth(text) {
     const plain = text.replace(/<[^>]+>/g, '').replace(/CCSDTQ\(P\)/g, 'even higher coupled-cluster levels').replace(/CCSDT\(Q\)/g, 'a higher coupled-cluster level').replace(/CCSD\(T\)/g, 'C C S D T').replace(/\b8Z\b/g, 'eight zeta').replace(/≈/g, ' about ').replace(/×/g, ' times ').replace(/−/g, 'minus ');
     return new Promise(res => {
       const ms = this.readMs(text);
@@ -360,7 +382,7 @@ const Narr = {
       speechSynthesis.speak(u);
     });
   },
-  stop() { if (this.ok) try { speechSynthesis.cancel(); } catch (e) {} }
+  stop() { if (this.ok) try { speechSynthesis.cancel(); } catch (e) {} if (this.audio) try { this.audio.pause(); } catch (e) {} }
 };
 
 /* ---------- player ---------- */
@@ -635,6 +657,25 @@ const PHYS = {
     return u;
   },
   co2Best(phi, th) { let b = [0.8, PHYS.co2E(0.8, phi, th)]; for (let d = 0.28; d <= 0.8; d += 0.004) { const v = PHYS.co2E(d, phi, th); if (v < b[1]) b = [d, v]; } return b; },
+  /* third virial coefficient of the Lennard-Jones model (reduced: σ = 1, T* = k_B T/ε): two Monte Carlo estimators */
+  msmc(T) {
+    const f = r2 => { const r6 = 1 / (r2 * r2 * r2); return Math.exp(-4 * (r6 * r6 - r6) / T) - 1; };
+    const fhs = r2 => r2 < 1 ? -1 : 0;
+    const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+    const gam = (p2, p3) => f(d2([0, 0, 0], p2)) * f(d2([0, 0, 0], p3)) * f(d2(p2, p3));
+    const gamHS = (p2, p3) => fhs(d2([0, 0, 0], p2)) * fhs(d2([0, 0, 0], p3)) * fhs(d2(p2, p3));
+    const B3HS = 5 / 8 * Math.pow(2 * Math.PI / 3, 2);       // hard spheres, σ = 1
+    let seed = 12345; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const L = 3, V = Math.pow(2 * L, 3);                      // plain MC: positions uniform in a cube of side 2L
+    const st = { nP: 0, sumP: 0, sumP2: 0, nM: 0, sumS: 0, sumH: 0, p2: [1.05, 0, 0], p3: [0.52, 0.9, 0], g: 0, lastP: [], lastM: [] };
+    st.g = gam(st.p2, st.p3);
+    st.stepPlain = n => { for (let i = 0; i < n; i++) { const p2 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)], p3 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)]; const v = gam(p2, p3); st.nP++; st.sumP += v; st.sumP2 += v * v; if (i % 4 === 0) { st.lastP.push(p2, p3); if (st.lastP.length > 400) st.lastP.splice(0, 2); } } };
+    st.stepMayer = n => { for (let i = 0; i < n; i++) { const which = rnd() < .5 ? 'p2' : 'p3', old = st[which], trial = old.map(c => c + 0.5 * (2 * rnd() - 1)); const save = st[which]; st[which] = trial; const g = gam(st.p2, st.p3); if (Math.abs(g) >= Math.abs(st.g) * rnd()) st.g = g; else st[which] = save; const pi = Math.abs(st.g) || 1e-300; st.nM++; st.sumS += st.g / pi; st.sumH += gamHS(st.p2, st.p3) / pi; if (i % 4 === 0) { st.lastM.push(st.p2.slice(), st.p3.slice()); if (st.lastM.length > 400) st.lastM.splice(0, 2); } } };
+    st.plain = () => st.nP ? -(1 / 3) * V * V * st.sumP / st.nP : NaN;
+    st.plainErr = () => { if (st.nP < 2) return NaN; const m = st.sumP / st.nP, va = st.sumP2 / st.nP - m * m; return (1 / 3) * V * V * Math.sqrt(Math.max(va, 0) / st.nP); };
+    st.mayer = () => st.nM && st.sumH ? B3HS * st.sumS / st.sumH : NaN;
+    return st;
+  },
   /* Axilrod–Teller–Muto angular/radial factor for three atoms (any length unit) */
   atm(p1, p2, p3) {
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -644,6 +685,7 @@ const PHYS = {
   }
 };
 </script>
+<script>const AUDIO = new Set(["0571f95d", "071ffbab", "0e2a09f1", "0e66d63c", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "37ae0853", "3d676353", "452c6417", "510f28dc", "51d53770", "5992aefa", "5dd99624", "64a38442", "67c5c42b", "6d38f40e", "717e4c30", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "8f1dbb08", "90fc55fa", "95a8d84e", "9d76e97f", "9f002d24", "a2f997f3", "b21ebadd", "b22e34f9", "b9dc7daf", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d8199391", "e24e8e96", "e857bee8", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
@@ -2196,9 +2238,9 @@ const atmSign = (A, B, C) => {   // Axilrod–Teller–Muto angular factor for a
 };
 const lamDB = (massU, T) => 6.62607015e-34 / Math.sqrt(2 * Math.PI * massU * 1.66053907e-27 * 1.380649e-23 * T) * 1e9;  // nm
 CH.push({
-  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 11,
+  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 17,
   blurb: 'Three molecules are not three pairs, and light atoms are not points. Both effects decide the last fraction of a percent.',
-  about: `<p>Two refinements turn good predictions into reference-grade ones. First, nonadditive three-body forces: the energy of three molecules differs from the sum of their pair energies. They enter the third virial coefficient <i>C</i> and every property of dense fluids. Second, quantum effects: light atoms at low temperature are smeared out over a thermal de Broglie wavelength comparable to their size.</p><p>Hellmann developed a virial formalism for nonadditive potentials (2011), computed three-body potentials for argon and CO₂, and built virial equations of state up to the eighth coefficient. With Giovanni Garberoglio he uses path-integral Monte Carlo to include quantum effects exactly.</p>`,
+  about: `<p>Two refinements turn good predictions into reference-grade ones. First, nonadditive three-body forces: the energy of three molecules differs from the sum of their pair energies. They enter the third virial coefficient <i>C</i> and every property of dense fluids. Second, quantum effects: light atoms at low temperature are smeared out over a thermal de Broglie wavelength comparable to their size.</p><p>Hellmann developed a virial formalism for nonadditive potentials (2011), computed three-body potentials for argon and CO₂, and built virial equations of state up to the eighth coefficient. With Giovanni Garberoglio he uses path-integral Monte Carlo to include quantum effects exactly.</p><p>The high-order coefficients are integrals over many molecules at once; they are computed with Mayer-sampling Monte Carlo (Singh &amp; Kofke), a weighted sampling of the cluster integrals relative to a hard-sphere reference. The chapter ends with many-particle simulations: from J.-P. Crusius's 2016 thesis on argon to the liquid, supercritical and saturated states of argon and krypton computed at HSU (2021 to 2024).</p>`,
   sketch(g) {
     sv('polygon', { points: '60,110 140,110 100,40', fill: 'none', class: 'ar', 'stroke-width': 3, 'stroke-dasharray': '5 5' }, g);
     sketchAtoms(g, [[60, 110, 13, 'ar'], [140, 110, 13, 'ar'], [100, 40, 13, 'ar']]);
@@ -2209,7 +2251,11 @@ CH.push({
     { a: 'Jäger, Hellmann, Bich, Vogel', y: 2011, t: 'Ab initio virial equation of state for argon using a new nonadditive three-body potential', j: 'J. Chem. Phys. 135, 084308', doi: '10.1063/1.3627151', why: 'Pressures within the ±0.02 % experimental uncertainty up to 12 MPa (supercritical, near room temperature).' },
     { a: 'Hellmann', y: 2017, t: 'Nonadditive three-body potential and third to eighth virial coefficients of carbon dioxide', j: 'J. Chem. Phys. 146, 054302', doi: '10.1063/1.4974995', why: 'When theory starts auditing the reference equation of state.' },
     { a: 'Ströker, Hellmann, Meier', y: 2022, t: 'Thermodynamic properties of argon from Monte Carlo simulations using ab initio potentials', j: 'Phys. Rev. E 105, 064129', doi: '10.1103/PhysRevE.105.064129', why: 'Dense argon from first principles, nearly within experimental uncertainty.' },
-    { a: 'Hellmann, Garberoglio', y: 2026, t: 'Third and fourth density and acoustic virial coefficients of neon from first-principles calculations', j: 'J. Chem. Phys. 164, 124302', doi: '10.1063/5.0324867', why: 'Path-integral Monte Carlo for neon, 10 K to 5000 K.' }
+    { a: 'Hellmann, Garberoglio', y: 2026, t: 'Third and fourth density and acoustic virial coefficients of neon from first-principles calculations', j: 'J. Chem. Phys. 164, 124302', doi: '10.1063/5.0324867', why: 'Path-integral Monte Carlo for neon, 10 K to 5000 K.' },
+    { a: 'Crusius', y: 2016, t: 'Berechnung von ab initio-Wechselwirkungspotentialen und thermophysikalischen Eigenschaften für Ethylenoxid, Distickstoffmonoxid und Argon (PhD thesis)', j: 'Universität Rostock (RosDok)', why: 'First many-particle Monte Carlo of argon with ab initio pair and three-body potentials.' },
+    { a: 'Ströker, Hellmann, Meier', y: 2021, t: 'Systematic formulation of thermodynamic properties in the NpT ensemble', j: 'Phys. Rev. E 103, 023305', doi: '10.1103/PhysRevE.103.023305', why: 'The formulas behind the dense-fluid simulations.' },
+    { a: 'Ströker, Meier', y: 2024, t: 'Vapor–liquid equilibrium and thermodynamic properties of saturated argon and krypton from Monte Carlo simulations using ab initio potentials', j: 'J. Chem. Phys. 160, 094503', doi: '10.1063/5.0196466', why: 'The boiling curve from first principles.' },
+    { a: 'Marienhagen, Meier', y: 2024, t: 'Calculation of thermodynamic properties of helium using path integral Monte Carlo simulations in the NpT ensemble and ab initio potentials', j: 'J. Chem. Phys. 161, 224110', doi: '10.1063/5.0243210' }
   ],
   beats: [
     Object.assign(introBeat(6, 'Crowds and quantum blur', 'Three is not one pair plus two more.\nAnd at low temperature, atoms are not points.', (S, g) => {
@@ -2376,6 +2422,82 @@ CH.push({
       ]
     },
     {
+      id: 'mayer-sampling', label: 'Integrating over many molecules',
+      scene(S) {
+        S.text(110, 100, 'How do you integrate over eight molecules?', { size: 46, cls: 't-disp' });
+        S.text(110, 180, it('B') + sb('3') + ' = −⅓ ∫∫ ' + it('f') + sb('12') + it('f') + sb('13') + it('f') + sb('23') + ' d' + it('R') + sb('2') + ' d' + it('R') + sb('3') + ',   ' + it('f') + sb('ij') + ' = exp(−' + it('V') + sb('ij') + '/' + it('k') + sb('B') + it('T') + ') − 1', { size: 36, cls: 't-disp' });
+        const dims = [['B₂', 3], ['B₃', 6], ['B₄', 9], ['B₆', 15], ['B₈', 21]];
+        S._dims = dims.map(([b, d], k) => { const g = S.group({ hide: 1 }); S.place(g, 110 + k * 200, 250); S.card(0, 0, 180, 150, { parent: g }); S.text(90, 60, b, { size: 40, anchor: 'middle', cls: 't-disp', parent: g }); S.text(90, 115, d + ' dims', { size: 24, anchor: 'middle', cls: 't-mono muted', parent: g }); return g; });
+        S._grid = S.para(1130, 290, 'grid with 10 points per axis:\n' + it('B') + sb('8') + ' needs 10²¹ evaluations', { size: 26, hide: 1 });
+        S._plain = S.group({ hide: 1 }); S.place(S._plain, 110, 470);
+        S.card(0, 0, 660, 330, { parent: S._plain });
+        S.text(30, 50, 'plain random sampling', { size: 28, weight: 600, parent: S._plain });
+        S.para(30, 100, 'molecules land far apart almost every time:\nthe integrand is ≈ 0, the rare close trios\ndominate, and the estimate is pure noise', { size: 24, cls: 'muted', parent: S._plain });
+        S._ms = S.group({ hide: 1 }); S.place(S._ms, 830, 470);
+        S.card(0, 0, 660, 330, { parent: S._ms });
+        S.text(30, 50, 'Mayer sampling (Singh & Kofke 2004)', { size: 28, weight: 600, cls: 'f-he', parent: S._ms });
+        S.para(30, 100, 'a random walk visits configurations Γ with weight\n' + it('π') + ' = |' + it('γ') + '|, then divides by a hard-sphere\nreference whose ' + it('B') + sb('n') + ' is known exactly:', { size: 24, parent: S._ms });
+        S.text(30, 250, it('B') + sb('n') + ' = ' + it('B') + sb('n') + sp('HS') + ' · ⟨' + it('γ') + '/' + it('π') + '⟩' + sb('π') + ' / ⟨' + it('γ') + sb('HS') + '/' + it('π') + '⟩' + sb('π'), { size: 34, cls: 't-disp', parent: S._ms });
+        S._an = S.text(110, 870, 'Like measuring a lake by walking mostly near the water, and comparing with a pond of known size.', { size: 24, cls: 'muted', italic: 1, hide: 1 });
+      },
+      lines: [
+        ['Each virial coefficient is an integral over all positions of several molecules at once. For three atoms, that is six dimensions.', S => { S.fadeIn(S._dims[0]); S.fadeIn(S._dims[1]); }],
+        ['For the eighth coefficient it is twenty-one, and for rigid molecules many more. A grid with just ten points per axis would need ten to the power twenty-one evaluations.', S => { S._dims.slice(2).forEach(d => S.fadeIn(d)); S.fadeIn(S._grid); }],
+        ['Plain random sampling fails too. The molecules almost always land far apart, where the integrand is practically zero.', S => S.fadeIn(S._plain)],
+        ['The way out is weighted sampling, the same idea as Boltzmann-weighted Monte Carlo for the partition function.', S => S.fadeIn(S._ms)],
+        ['A random walk visits configurations in proportion to the size of the integrand itself, so it spends its time where the integral is made.'],
+        ['The unknown normalisation cancels by comparing, along the same walk, with hard spheres, whose coefficient is known exactly. Like measuring a lake by walking mostly near the water, and comparing with a pond of known size.', S => S.fadeIn(S._an)],
+        ['This Mayer-sampling method, by Singh and Kofke, is how Hellmann computed virial coefficients up to the eighth for carbon dioxide, krypton and methane.']
+      ]
+    },
+    {
+      id: 'explore-msmc', label: 'Try it: Mayer sampling',
+      scene(S) {
+        S.text(110, 90, 'Plain versus weighted sampling, live', { size: 44, cls: 't-disp' });
+        S.text(110, 135, 'Third virial coefficient of the Lennard-Jones model at ' + it('T') + '* = 2 (argon at about 240 K)', { size: 24, cls: 'muted' });
+        const panel = (x, title, cls) => { const g = S.group(); S.card(x, 170, 330, 330, { parent: g }); S.text(x + 165, 205, title, { size: 22, anchor: 'middle', cls: 'f-' + cls, parent: g }); S.circle(x + 165, 340, 9, { class: 'f-ar', parent: g }); S.circle(x + 165, 340, 55, { fill: 'none', class: 'kr', 'stroke-width': 1.5, 'stroke-dasharray': '4 5', parent: g }); return S.group({ parent: g }); };
+        S._dotsP = panel(110, 'plain: where it samples', 'kr');
+        S._dotsM = panel(460, 'Mayer: where it samples', 'he');
+        S.text(110, 530, 'atom 1 at the centre; dashed circle = contact distance ' + it('σ'), { size: 20, cls: 'muted' });
+        const ref = 1.9172 * Math.pow(6.02214076e23 * Math.pow(0.3405e-7, 3), 2);   // σ⁶ -> cm⁶/mol²
+        S._ref = ref; S._sc = Math.pow(6.02214076e23 * Math.pow(0.3405e-7, 3), 2);
+        const A = S.axes({ x: 900, y: 190, w: 590, h: 520 }, { xr: [2, 6], yr: [-1000, 3000], xt: [2, 3, 4, 5, 6], yt: [-1000, 0, 1000, 2000, 3000], xl: 'samples (10ⁿ)', yl: it('B') + sb('3') + ' / (cm⁶/mol²)', xfmt: v => '10' + '⁰¹²³⁴⁵⁶'[v], grid: true });
+        S._A = A;
+        S.line(A.X(2), A.Y(ref), A.X(6), A.Y(ref), { w: 3, cls: 'good', 'stroke-dasharray': '10 8' });
+        S.text(A.X(6), A.Y(ref) - 12, 'exact: ' + Math.round(ref) + ' cm⁶/mol²', { size: 22, anchor: 'end', cls: 'f-good' });
+        S._cP = S.path('', { cls: 'kr', w: 4 }); S._cM = S.path('', { cls: 'he', w: 4 });
+        S._ro = S.para(110, 600, '', { size: 26, cls: 't-mono' });
+        S._st = PHYS.msmc(2); S._ptsP = []; S._ptsM = [];
+        S._draw = () => {
+          const st = S._st, sc = 55;
+          const dots = (g, arr, cls) => { g.replaceChildren(); for (let k = 0; k < arr.length; k++) { const p = arr[k], x = p[0] * sc, y = p[1] * sc; if (Math.abs(x) < 160 && Math.abs(y) < 150) sv('circle', { cx: (g === S._dotsP ? 275 : 625) + x, cy: 340 + y, r: 2.6, class: 'f-' + cls, opacity: .55 }, g); } };
+          dots(S._dotsP, st.lastP, 'kr'); dots(S._dotsM, st.lastM, 'he');
+          const path = pts => pts.map(([n, v], k) => (k ? 'L' : 'M') + A.X(Math.log10(n)).toFixed(1) + ',' + A.Y(clamp(v, -1000, 3000)).toFixed(1)).join('');
+          S._cP.setAttribute('d', path(S._ptsP)); S._cM.setAttribute('d', path(S._ptsM));
+          const p = st.plain() * S._sc, m = st.mayer() * S._sc;
+          S._ro.innerHTML = '';
+          ['samples: ' + st.nM.toLocaleString('en').replace(/,/g, '\u2009'), 'plain:  ' + (isFinite(p) ? Math.round(p) + ' ± ' + Math.round(st.plainErr() * S._sc) : '–') + ' cm⁶/mol²', 'Mayer:  ' + (isFinite(m) ? Math.round(m) : '–') + ' cm⁶/mol²'].forEach((ln, i) => sv('tspan', { x: 110, dy: i ? 40 : 0, html: scriptfix(ln) }, S._ro));
+        };
+        S._run = n => { const st = S._st; const next = Math.min(n, 1e6); while (st.nM < next) { const k = Math.min(next - st.nM, Math.max(100, Math.floor(st.nM * 0.08))); st.stepPlain(k); st.stepMayer(k); if (st.nM >= 100) { S._ptsP.push([st.nP, st.plain() * S._sc]); S._ptsM.push([st.nM, st.mayer() * S._sc]); } } S._draw(); };
+        S._run(100);
+        S.text(110, 880, 'Same number of samples for both; exact value from quadrature. Notation as in the Mayer-sampling papers: ' + it('γ') + ' integrand, ' + it('π') + ' = |' + it('γ') + '|, HS hard spheres.', { size: 20, cls: 'muted' });
+      },
+      explore: {
+        title: 'Run more samples and watch which estimate settles on the exact value.',
+        build(S, body) {
+          let timer = null, target = 100;
+          const step = () => { target = Math.min(1e6, Math.ceil(target * 1.25)); S._run(target); if (target >= 1e6) stop(); };
+          const go = hx('button', { class: 'go', onclick: () => { if (timer) stop(); else { timer = setInterval(step, 60); go.textContent = 'Pause'; } } }, 'Run');
+          const stop = () => { clearInterval(timer); timer = null; go.textContent = 'Run'; };
+          const reset = hx('button', { class: 'go ghost', onclick: () => { stop(); S._st = PHYS.msmc(2); S._ptsP = []; S._ptsM = []; target = 100; S._run(100); } }, 'Reset');
+          body.append(hx('div', { class: 'row', style: 'grid-column:1/-1' }, go, reset));
+          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2);grid-column:1/-1', html: 'The weighted walk (orange) stays near contact, where the triangle of Mayer functions is large, and converges quickly. Plain sampling (grey) scatters over the whole box and needs vastly more samples for the same precision. For <i>B</i><sub>8</sub> the gap is astronomically larger.' }));
+          return () => stop();
+        }
+      },
+      lines: [['Try it. Both methods estimate the same coefficient with the same number of samples.']]
+    },
+    {
       id: 'blur', label: 'Quantum blur',
       scene(S) {
         S.text(110, 120, 'Light atoms, low temperature: atoms get fuzzy', { size: 46, cls: 't-disp' });
@@ -2474,6 +2596,78 @@ CH.push({
         ['The computed density and speed of sound match the best experiments almost within their uncertainty.', S => S.fadeIn(S._r1)],
         ['For krypton, agreement came only once both three-body forces and quantum effects were included. Both refinements of this chapter really matter.', S => S.fadeIn(S._r2)]
       ]
+    },
+    {
+      id: 'phases', label: 'From pairs to a phase diagram',
+      scene(S) {
+        S.text(110, 100, 'From pairs to a phase diagram', { size: 46, cls: 't-disp' });
+        const Tt = 83.8, pt = 0.0689, Tc = 150.69, pc = 4.863;
+        const A = S.axes({ x: 200, y: 170, w: 760, h: 600 }, { xr: [70, 300], yr: [Math.log10(0.03), Math.log10(100)], xt: [100, 150, 200, 250, 300], yt: [-1, 0, 1, 2], xl: it('T') + ' / K', yl: it('p') + ' / MPa (logarithmic)', yfmt: v => ['0.1', '1', '10', '100'][v + 1] });
+        S._A = A;
+        const B = Math.log(pc / pt) / (1 / Tt - 1 / Tc), lp = T => Math.log10(pt * Math.exp(-B * (1 / T - 1 / Tt)));
+        S._sc = S.path(`M${A.X(Tc)},${A.Y(lp(Tc))} L${A.X(300)},${A.Y(lp(Tc))} L${A.X(300)},${A.Y(2)} L${A.X(Tc)},${A.Y(2)} Z`, { cls: 'he', w: 0, fill: 'var(--he)', 'fill-opacity': .14, hide: 1 });
+        S._vap = S.path(S.curve(lp, Tt, Tc, A.X, A.Y, 120), { cls: 'ar', w: 6, hide: 1 });
+        S._melt = S.path(`M${A.X(Tt)},${A.Y(Math.log10(pt))} L${A.X(96)},${A.Y(2)}`, { cls: 'kr', w: 4, hide: 1 });
+        S._cp = S.group({ hide: 1 }); S.circle(A.X(Tc), A.Y(lp(Tc)), 12, { class: 'f-ar', parent: S._cp }); S.text(A.X(Tc) + 18, A.Y(lp(Tc)) + 36, 'critical point 150.7 K, 4.86 MPa', { size: 22, cls: 'f-ar', parent: S._cp });
+        S._tp = S.group({ hide: 1 }); S.circle(A.X(Tt), A.Y(Math.log10(pt)), 9, { class: 'f-kr', parent: S._tp }); S.text(A.X(Tt) + 16, A.Y(Math.log10(pt)) + 30, 'triple point', { size: 22, cls: 'f-kr', parent: S._tp });
+        S._lab = S.group({ hide: 1 });
+        S.text(A.X(100), A.Y(1.2), 'liquid', { size: 28, parent: S._lab }); S.text(A.X(200), A.Y(-0.9), 'gas', { size: 28, parent: S._lab }); S.text(A.X(195), A.Y(1.6), 'supercritical', { size: 28, cls: 'f-he', parent: S._lab }); S.text(A.X(73), A.Y(1.7), 'solid', { size: 24, cls: 'muted', parent: S._lab });
+        const rows = [
+          ['2016', 'Crusius (PhD thesis): first many-particle\nMonte Carlo of argon with ab initio potentials'],
+          ['2021', 'Ströker, Hellmann, Meier: formulas for all\nproperties at constant pressure'],
+          ['2022', 'argon and krypton, liquid and supercritical:\ndensity and sound speed ≈ experiment'],
+          ['2024', 'saturation curve of argon and krypton;\nsupercritical helium by path integrals']
+        ];
+        S._rows = rows.map(([y, t], k) => { const g = S.group({ hide: 1 }); S.place(g, 1010, 200 + k * 150); S.text(0, 0, y, { size: 30, cls: 't-mono f-he', parent: g }); S.para(0, 40, t, { size: 21, parent: g }); return g; });
+        S.text(200, 880, 'Argon: real triple and critical points; vapour-pressure curve drawn with a simple two-point fit, melting line schematic.', { size: 20, cls: 'muted' });
+      },
+      lines: [
+        ['So far, the pair and three-body potentials have given us gases. Can they also give a whole phase diagram?'],
+        ['Here is argon. Below the boiling curve it is a gas, above it a liquid.', S => { S.fadeIn(S._lab); S.fadeIn(S._melt); return S.drawOn(S._vap, 1200); }],
+        ['The curve ends at the critical point, about a hundred and fifty-one kelvin and five megapascals. Beyond it, gas and liquid can no longer be told apart: the supercritical region.', S => { S.fadeIn(S._cp); S.fadeIn(S._tp); S.fadeIn(S._sc); }],
+        ['In 2016, Johann-Philipp Crusius, in his doctoral thesis supervised by Egon Hassel and Karsten Meier, simulated many argon atoms with ab initio pair and three-body potentials. The results mostly fell within the uncertainty of the reference equation of state.', S => S.fadeIn(S._rows[0])],
+        ['In 2021, Ströker, Hellmann and Meier derived compact formulas for every thermodynamic property in simulations at constant pressure.', S => S.fadeIn(S._rows[1])],
+        ['With them, the liquid and supercritical states of argon and krypton came out almost within experimental uncertainty.', S => S.fadeIn(S._rows[2])],
+        ['And in 2024, the Hamburg group traced the boiling curve itself, and simulated supercritical helium with path integrals. Theory now reaches across the whole phase diagram.', S => S.fadeIn(S._rows[3])],
+        ['One lesson from other groups as well: with pair potentials alone, the critical point comes out too hot. The three-body forces fix it.']
+      ]
+    },
+    {
+      id: 'explore-phases', label: 'Try it: condense a fluid',
+      scene(S) {
+        S.text(110, 90, 'Watch a fluid condense', { size: 44, cls: 't-disp' });
+        const N = 110, Lb = Math.sqrt(N / 0.3), ox = 160, oy = 150, px = 640 / Lb;
+        S.rect(ox, oy, 640, 640, { rx: 6, class: 'fill-paper stroke-rule', 'stroke-width': 2 });
+        let seed = 99; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        const P = []; const side = Math.ceil(Math.sqrt(N)); for (let i = 0; i < N; i++) P.push([((i % side) + .5) * Lb / side, (Math.floor(i / side) + .5) * Lb / side]);
+        S._c = P.map(p => S.circle(ox + p[0] * px, oy + p[1] * px, px * .5, { class: 'f-ar', opacity: .85 }));
+        S._T = 0.9; S._ro = S.text(860, 230, '', { size: 30, cls: 't-mono' }); S._ro2 = S.text(860, 280, '', { size: 26 });
+        const e = (i, x, y) => { let u = 0; for (let j = 0; j < N; j++) { if (j === i) continue; let dx = x - P[j][0], dy = y - P[j][1]; dx -= Lb * Math.round(dx / Lb); dy -= Lb * Math.round(dy / Lb); const r2 = dx * dx + dy * dy; if (r2 < 6.25) { const r6 = 1 / (r2 * r2 * r2); u += 4 * (r6 * r6 - r6); } } return u; };
+        S._set = T => { S._T = T; S._ro.innerHTML = it('T') + '* = ' + T.toFixed(2); S._ro2.innerHTML = T < 0.43 ? 'below the critical temperature: droplets form' : T < 0.5 ? 'near the critical point: large fluctuations' : 'above the critical temperature: one homogeneous fluid'; };
+        S._set(0.9);
+        S.para(860, 380, 'Two-dimensional Lennard-Jones toy model,\nMetropolis Monte Carlo, 110 particles.\nIts critical temperature is about ' + it('T') + '* ≈ 0.46.', { size: 24, cls: 'muted' });
+        const gen = S.gen;
+        const loop = () => {
+          if (gen !== S.gen) return;
+          for (let s = 0; s < 3 * N; s++) {
+            const i = Math.floor(rnd() * N), x = (P[i][0] + (rnd() - .5) * .5 + Lb) % Lb, y = (P[i][1] + (rnd() - .5) * .5 + Lb) % Lb;
+            const dU = e(i, x, y) - e(i, P[i][0], P[i][1]);
+            if (dU < 0 || rnd() < Math.exp(-dU / S._T)) P[i] = [x, y];
+          }
+          P.forEach((p, i) => { S._c[i].setAttribute('cx', (ox + p[0] * px).toFixed(1)); S._c[i].setAttribute('cy', (oy + p[1] * px).toFixed(1)); });
+          if (!REDUCE) requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+        S.text(110, 880, 'Qualitative only: real argon is three-dimensional and needs the ab initio potentials of this chapter.', { size: 20, cls: 'muted' });
+      },
+      explore: {
+        title: 'Cool the fluid below the critical temperature and give it a few seconds.',
+        build(S, body, slider) {
+          slider(body, { id: 'T6p', label: 'temperature <i>T</i>* (reduced)', min: 0.3, max: 1.2, step: 0.01, value: 0.9, show: v => v.toFixed(2), onInput: v => S._set(v) });
+          body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'Below about 0.46 the particles gather into droplets surrounded by vapour: two phases. Above it they stay spread out, however long you wait. That is the supercritical fluid.' }));
+        }
+      },
+      lines: [['Try it with a toy model: cool the fluid and watch droplets appear.']]
     },
     achievedBeat([
       { big: '±0.02 %', t: 'Argon pressures within the ±0.02 % experimental\nuncertainty up to 12 MPa, from theory alone', src: 'Jäger, Hellmann, Bich, Vogel, J. Chem. Phys. 135, 084308 (2011)', say: 'For argon, an equation of state built only from theory matched the best measured pressures within their uncertainty of two hundredths of a percent.', c: 'ar' },
