@@ -491,14 +491,20 @@ function ask(q, gen) {
     let cleanup = () => {};
     if (q.type === 'choice') {
       const opts = hx('div', { class: 'opts' });
-      q.opts.forEach((o, k) => {
+      /* answer order is shuffled every time the question is shown */
+      const order = q.opts.map((o, k) => k);
+      for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+      const btns = [];
+      order.forEach(k => {
+        const o = q.opts[k];
         const b = hx('button', { class: 'opt', html: o.t });
+        b._ok = !!o.ok;
         b.onclick = () => {
           if (solved) return;
           if (o.ok) { b.classList.add('ok'); record(true); finish(true, o.why); }
-          else { b.classList.add('no'); wrong(o.why, () => { const kk = q.opts.findIndex(z => z.ok); opts.children[kk].classList.add('ok'); finish(false, q.opts[kk].why); }); }
+          else { b.classList.add('no'); wrong(o.why, () => { const kk = q.opts.findIndex(z => z.ok); btns.find(x => x._ok).classList.add('ok'); finish(false, q.opts[kk].why); }); }
         };
-        opts.append(b);
+        btns.push(b); opts.append(b);
       });
       card.append(opts);
     } else if (q.type === 'num') {
@@ -702,11 +708,11 @@ const PHYS = {
   }
 };
 </script>
-<script>const AUDIO = new Set(["0266fdac", "03e284e0", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0d72b1fe", "0e2a09f1", "0e66d63c", "0ebf81b7", "137f47fb", "138e5ab9", "14c883b8", "16912f26", "1694e95c", "1951eef5", "1b0c0049", "1cd55c5e", "1f7bc452", "21a55036", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "35d7d063", "35d82ed3", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c4e25fc", "3c9712aa", "3d676353", "3e33512a", "3e5e585c", "3e89e021", "3ff8aeec", "452c6417", "45effcac", "48d50000", "49869147", "49e3d79c", "4a3ee721", "4aa9c8f1", "4ff429b0", "50661b7c", "510f28dc", "51d53770", "51db0960", "587fbfb3", "58fae00a", "5992aefa", "5ad60823", "5c3834b5", "5d460316", "5dd99624", "608d8965", "610b3b43", "611a02ce", "62cae3bb", "64a38442", "67c5c42b", "685a4c25", "6895625e", "69cd74bc", "6d38f40e", "704696a4", "714ddf45", "717e4c30", "75e6e64b", "7733e00d", "77b757e9", "798e90b0", "79fe5ee8", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "8586e33a", "85a7e569", "863520e8", "8aa49894", "8c756bd6", "8d21263e", "8f1dbb08", "8f967b80", "8faab5f1", "901e8ae3", "907a6dae", "90fc55fa", "91c21520", "95a8d84e", "97348e01", "98717a2e", "9943b37c", "9b696576", "9d76e97f", "9f002d24", "9ff8386e", "a1edf758", "a22c89d5", "a23dec1d", "a2ceac02", "a2f997f3", "a3ba9b42", "a6651abf", "a92c8b97", "aa56974c", "ac590324", "b05658bb", "b1aa9bac", "b21ebadd", "b22e34f9", "b28dcac4", "b5805b77", "b70c5c24", "b89c71f7", "b8f25ab2", "b9dc7daf", "bba32bb5", "bc0b77a8", "bd60890f", "c315a2de", "c50aa230", "c5d3c631", "c6782b31", "c8ea9009", "ca514238", "ca59f537", "ca8d5f2c", "cc54e602", "cd19f122", "cd9b1e8c", "d089c48f", "d198cc7e", "d1b48888", "d47c69f9", "d5153738", "d769d47a", "d8199391", "dbed11df", "dc0999ca", "de0cc64e", "e0629108", "e07add6b", "e186dcf0", "e24e8e96", "e2563ad4", "e2f8c4dc", "e492c55d", "e5918597", "e7ea5c43", "e857bee8", "eba2e535", "ed017451", "ee055384", "eeed0bf6", "f32e2da7", "f3a3d033", "f656d72f", "f90b8ee9", "fae8136b", "fcfac5c9", "fe165d01", "fe6d229a", "ff181da6"]);</script>
+<script>const AUDIO = new Set(["0266fdac", "03e284e0", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0d72b1fe", "0e2a09f1", "0e66d63c", "0ebf81b7", "137f47fb", "138e5ab9", "14c883b8", "16912f26", "1694e95c", "1951eef5", "1b0c0049", "1cd55c5e", "1f7bc452", "21a55036", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "2e1fca62", "35d7d063", "35d82ed3", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c4e25fc", "3c9712aa", "3d676353", "3e33512a", "3e5e585c", "3e89e021", "3ff8aeec", "452c6417", "45effcac", "48d50000", "49869147", "49e3d79c", "4a3ee721", "4aa9c8f1", "4ff429b0", "50661b7c", "510f28dc", "51d53770", "51db0960", "528baa5f", "587fbfb3", "58fae00a", "5992aefa", "5ad60823", "5c3834b5", "5d460316", "5dd99624", "608d8965", "610b3b43", "611a02ce", "62cae3bb", "64a38442", "67c5c42b", "685a4c25", "6895625e", "693e8357", "69cd74bc", "6d38f40e", "704696a4", "714ddf45", "717e4c30", "75e6e64b", "7733e00d", "77b757e9", "798e90b0", "79fe5ee8", "7a696aae", "7a86d1df", "7e733106", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "8586e33a", "85a7e569", "863520e8", "8aa49894", "8c756bd6", "8d21263e", "8f1dbb08", "8f967b80", "8faab5f1", "901e8ae3", "907a6dae", "90fc55fa", "91c21520", "95a8d84e", "97348e01", "98717a2e", "9943b37c", "9b696576", "9d76e97f", "9f002d24", "9ff8386e", "a1edf758", "a22c89d5", "a23dec1d", "a2ceac02", "a2f997f3", "a3ba9b42", "a6651abf", "a92c8b97", "aa56974c", "ac590324", "b05658bb", "b1aa9bac", "b21ebadd", "b22e34f9", "b28dcac4", "b5805b77", "b70c5c24", "b89c71f7", "b8f25ab2", "b9dc7daf", "bba32bb5", "bc0b77a8", "bd60890f", "c315a2de", "c50aa230", "c5d3c631", "c6782b31", "c8ea9009", "ca514238", "ca59f537", "ca8d5f2c", "cc54e602", "cd19f122", "cd9b1e8c", "d089c48f", "d198cc7e", "d1b48888", "d47c69f9", "d5153738", "d769d47a", "d8199391", "dbed11df", "dc0999ca", "de0cc64e", "e0629108", "e07add6b", "e186dcf0", "e24e8e96", "e2563ad4", "e2f8c4dc", "e492c55d", "e5918597", "e7ea5c43", "e857bee8", "eba2e535", "ed017451", "ee055384", "eeed0bf6", "f32e2da7", "f3a3d033", "f656d72f", "f90b8ee9", "fae8136b", "fcfac5c9", "fe165d01", "fe6d229a", "ff181da6"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
-  chips: ['10 chapters', '≈ 110 minutes', 'High-school physics & chemistry', 'Based on 43 papers, 2007–2026'],
+  chips: ['10 chapters', '≈ 110 minutes', 'High-school physics & chemistry', 'Based on 77 papers, 2007–2026'],
   ladderSVG: `<svg viewBox="0 0 520 420" class="stage" role="img" aria-label="The ladder from quantum mechanics to gas properties">
     <style>.lb{font:600 19px var(--display);fill:var(--ink)} .ls{font:400 13px var(--body);fill:var(--ink-2)} .lm{font:500 11px var(--mono);fill:var(--ink-2);letter-spacing:.1em}</style>
     <g transform="translate(24,26)">
@@ -2257,7 +2263,7 @@ const atmSign = (A, B, C) => {   // Axilrod–Teller–Muto angular factor for a
 };
 const lamDB = (massU, T) => 6.62607015e-34 / Math.sqrt(2 * Math.PI * massU * 1.66053907e-27 * 1.380649e-23 * T) * 1e9;  // nm
 CH.push({
-  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 14,
+  id: 'crowds', n: 6, title: 'Crowds and quantum blur', minutes: 15,
   blurb: 'Three molecules are not three pairs, and light atoms are not points. Both effects decide the last fraction of a percent.',
   about: `<p>Two refinements turn good predictions into reference-grade ones. First, nonadditive three-body forces: the energy of three molecules differs from the sum of their pair energies. They enter the third virial coefficient <i>C</i> and every property of dense fluids. Second, quantum effects: light atoms at low temperature are smeared out over a thermal de Broglie wavelength comparable to their size.</p><p>Hellmann developed a virial formalism for nonadditive potentials (2011), computed three-body potentials for argon and CO₂, and built virial equations of state up to the eighth coefficient. With Giovanni Garberoglio he uses path-integral Monte Carlo to include quantum effects exactly.</p><p>Such coefficients also test reference equations of state. In 2026 Lemmon, Harvey and Hellmann (NIST) published a new equation of state for carbon dioxide, an alternative to the Span–Wagner reference of 1996, that improves on it for virial coefficients and supercritical densities.</p><p>The high-order coefficients are integrals over many molecules at once; they are computed with Mayer-sampling Monte Carlo (Singh &amp; Kofke), a weighted sampling of the cluster integrals relative to a hard-sphere reference.</p>`,
   sketch(g) {
@@ -2437,6 +2443,37 @@ CH.push({
         ['For carbon dioxide, in 2017, the theory agreed with the official reference equation mostly within half a percent.', S => S.fadeIn(S._rows[1])],
         ['And above seven hundred kelvin it pointed to weaknesses in the reference equation itself. Theory started auditing the standard.'],
         ['Krypton and methane followed. And for mercury vapour the method failed; Hellmann co-authored that negative result too.', S => { S.fadeIn(S._rows[2]); S.fadeIn(S._rows[3]); S.fadeIn(S._rows[4]); }]
+      ]
+    },
+    {
+      id: 'co2-reference', label: 'Theory tests the reference',
+      scene(S) {
+        S.text(110, 100, 'Carbon dioxide: theory tests the reference', { size: 46, cls: 't-disp' });
+        S.text(110, 150, 'Engineers use reference equations of state: one formula for every property of a fluid.', { size: 26, cls: 'muted' });
+        const cards = [
+          ['1996', 'Span–Wagner', 'the reference equation for CO₂,\nfitted to the measurements\nof its time', 'kr'],
+          ['2017', 'ab initio virial coefficients', it('B') + ' to ' + it('B') + sb('8') + ' from two- and three-body\npotentials; above 700 K they point\nto weaknesses of the reference', 'xe'],
+          ['2026', 'new NIST equation', 'Lemmon, Harvey, Hellmann: better\nvirial coefficients and supercritical\ndensities; valid to 2000 K, 1000 MPa', 'he']
+        ];
+        S._cards = cards.map(([y, h, t, c], k) => {
+          const g = S.group({ hide: 1 }); S.place(g, 110 + k * 480, 230);
+          S.card(0, 0, 440, 420, { parent: g });
+          S.text(30, 70, y, { size: 52, cls: 't-mono f-' + c, parent: g });
+          S.text(30, 130, h, { size: 28, weight: 600, parent: g });
+          S.para(30, 190, t, { size: 23, parent: g });
+          return g;
+        });
+        S._arrows = [0, 1].map(k => S.path(`M${110 + k * 480 + 445},440 L${110 + (k + 1) * 480 - 8},440`, { cls: 'muted', w: 3, style: 'stroke:var(--ink-2)', 'marker-end': 'url(#arrow)', hide: 1 }));
+        S._speed = S.text(110, 760, 'The new equation agrees with Span–Wagner for most properties, is free of small unphysical wiggles near the critical point,', { size: 24, hide: 1 });
+        S._speed2 = S.text(110, 800, 'and runs 1.5 to 2 times faster in NIST’s REFPROP software.', { size: 24, hide: 1 });
+        S.text(110, 880, 'Lemmon, Harvey, Hellmann, NIST IR 8608 (2026); Hellmann, J. Chem. Phys. 146, 054302 (2017).', { size: 20, cls: 'muted' });
+      },
+      lines: [
+        ['Engineers rarely use virial coefficients directly. They use reference equations of state: one formula that gives every property of a fluid.'],
+        ['For carbon dioxide, the reference since 1996 has been the equation of Span and Wagner, fitted to the measurements of its time.', S => S.fadeIn(S._cards[0])],
+        ['In 2017, Hellmann’s ab initio virial coefficients showed that above seven hundred kelvin it was not quite right.', S => { S.fadeIn(S._arrows[0]); S.fadeIn(S._cards[1]); }],
+        ['In 2026, Lemmon and Harvey at NIST, together with Hellmann, published a new equation of state for carbon dioxide.', S => { S.fadeIn(S._arrows[1]); S.fadeIn(S._cards[2]); }],
+        ['It matches the old one for most properties, but does better for virial coefficients and supercritical densities, and it runs up to twice as fast.', S => { S.fadeIn(S._speed); S.fadeIn(S._speed2); }]
       ]
     },
     {
