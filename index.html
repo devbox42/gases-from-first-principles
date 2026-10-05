@@ -332,7 +332,7 @@ const S = {
 function lineHash(t) { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
 /* ---------- narration: browser speech with timed fallback ---------- */
 const Narr = {
-  on: store.get('voice', true), rate: store.get('rate', 1), voice: null, ok: 'speechSynthesis' in window,
+  on: store.get('voiceOn', true), rate: store.get('rate', 1), voice: null, ok: 'speechSynthesis' in window,
   init() {
     if (!this.ok) return;
     const pick = () => {
@@ -3511,7 +3511,7 @@ function renderLesson(ch) {
 
   const voiceBtn = hx('button', { class: 'tbtn', 'aria-pressed': String(Narr.on), title: Narr.ok ? 'Narration voice' : 'Speech is not available in this browser' }, Narr.on ? 'Voice on' : 'Voice off');
   voiceBtn.onclick = () => {
-    Narr.on = !Narr.on; store.set('voice', Narr.on);
+    Narr.on = !Narr.on; store.set('voiceOn', Narr.on);
     voiceBtn.setAttribute('aria-pressed', String(Narr.on)); voiceBtn.textContent = Narr.on ? 'Voice on' : 'Voice off';
     if (P.playing) { interrupt(); P.playing = false; togglePlay(); }
   };
