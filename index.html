@@ -276,7 +276,7 @@ const S = {
     });
   },
   wait(ms) { const gen = this.gen; if (this.fast) return Promise.resolve(); return new Promise(r => setTimeout(r, gen === S.gen ? ms : 0)); },
-  fadeIn(e, ms = 500) { if (Array.isArray(e)) return Promise.all(e.map(x => this.fadeIn(x, ms))); const o0 = +(e.style.opacity || 0); return this.tween(ms, t => e.style.opacity = lerp(o0, 1, t)); },
+  fadeIn(e, ms = 500) { if (Array.isArray(e)) return Promise.all(e.map(x => this.fadeIn(x, ms))); const o0 = +(e.style.opacity || 0), o1 = e.hasAttribute('opacity') ? +e.getAttribute('opacity') : 1; return this.tween(ms, t => e.style.opacity = lerp(o0, o1, t)); },
   fadeOut(e, ms = 400) { if (Array.isArray(e)) return Promise.all(e.map(x => this.fadeOut(x, ms))); const o0 = +(e.style.opacity === '' ? 1 : e.style.opacity); return this.tween(ms, t => e.style.opacity = lerp(o0, 0, t)); },
   to(e, ms, attrs) {   // tween numeric attributes
     const from = {}; for (const k in attrs) from[k] = parseFloat(e.getAttribute(k)) || 0;
@@ -420,6 +420,10 @@ function gotoBeat(i, play = P.playing) {
   setCaption(L.length ? L[0][0] : '', b);
   UI.sync();
   if (play || !L.length) run(P.gen);
+  else if (b.ask || b.explore) {             // paused navigation: build the end state, then show the card
+    const g = P.gen;
+    (async () => { S.fast = true; for (const [, a] of L) if (a) { try { await a(S); } catch (e) { console.error(e); } } S.fast = false; if (g !== P.gen) return; P.line = L.length; P.acted = L.length - 1; run(g); })();
+  }
 }
 async function run(gen) {
   const b = beat(), L = lines(b);
@@ -441,7 +445,7 @@ async function run(gen) {
     if (b._asked !== gen) { b._asked = gen; await (b.ask ? ask(b.ask, gen) : explore(b, gen)); }
     else return;
     if (gen !== P.gen) return;
-    if (P.i < P.ch.beats.length - 1) { gotoBeat(P.i + 1, true); }
+    if (P.i < P.ch.beats.length - 1) { gotoBeat(P.i + 1, P.playing); }
     return;
   }
   if (P.playing && P.i < P.ch.beats.length - 1) { await S.wait(500); if (gen === P.gen && P.playing) gotoBeat(P.i + 1, true); }
@@ -692,8 +696,8 @@ const PHYS = {
     const L = 3, V = Math.pow(2 * L, 3);                      // plain MC: positions uniform in a cube of side 2L
     const st = { nP: 0, sumP: 0, sumP2: 0, nM: 0, sumS: 0, sumH: 0, p2: [1.05, 0, 0], p3: [0.52, 0.9, 0], g: 0, lastP: [], lastM: [] };
     st.g = gam(st.p2, st.p3);
-    st.stepPlain = n => { for (let i = 0; i < n; i++) { const p2 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)], p3 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)]; const v = gam(p2, p3); st.nP++; st.sumP += v; st.sumP2 += v * v; if (i % 4 === 0) { st.lastP.push(p2, p3); if (st.lastP.length > 400) st.lastP.splice(0, 2); } } };
-    st.stepMayer = n => { for (let i = 0; i < n; i++) { const which = rnd() < .5 ? 'p2' : 'p3', old = st[which], trial = old.map(c => c + 0.5 * (2 * rnd() - 1)); const save = st[which]; st[which] = trial; const g = gam(st.p2, st.p3); if (Math.abs(g) >= Math.abs(st.g) * rnd()) st.g = g; else st[which] = save; const pi = Math.abs(st.g) || 1e-300; st.nM++; st.sumS += st.g / pi; st.sumH += gamHS(st.p2, st.p3) / pi; if (i % 4 === 0) { st.lastM.push(st.p2.slice(), st.p3.slice()); if (st.lastM.length > 400) st.lastM.splice(0, 2); } } };
+    st.stepPlain = n => { for (let i = 0; i < n; i++) { const p2 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)], p3 = [L * (2 * rnd() - 1), L * (2 * rnd() - 1), L * (2 * rnd() - 1)]; const v = gam(p2, p3); st.nP++; st.sumP += v; st.sumP2 += v * v; if (i % 4 === 0) { st.lastP.push(p2, p3); if (st.lastP.length > 800) st.lastP = st.lastP.slice(-400); } } };
+    st.stepMayer = n => { for (let i = 0; i < n; i++) { const which = rnd() < .5 ? 'p2' : 'p3', old = st[which], trial = old.map(c => c + 0.5 * (2 * rnd() - 1)); const save = st[which]; st[which] = trial; const g = gam(st.p2, st.p3); if (Math.abs(g) >= Math.abs(st.g) * rnd()) st.g = g; else st[which] = save; const pi = Math.abs(st.g) || 1e-300; st.nM++; st.sumS += st.g / pi; st.sumH += gamHS(st.p2, st.p3) / pi; if (i % 4 === 0) { st.lastM.push(st.p2.slice(), st.p3.slice()); if (st.lastM.length > 800) st.lastM = st.lastM.slice(-400); } } };
     st.plain = () => st.nP ? -(1 / 3) * V * V * st.sumP / st.nP : NaN;
     st.plainErr = () => { if (st.nP < 2) return NaN; const m = st.sumP / st.nP, va = st.sumP2 / st.nP - m * m; return (1 / 3) * V * V * Math.sqrt(Math.max(va, 0) / st.nP); };
     st.mayer = () => st.nM && st.sumH ? B3HS * st.sumS / st.sumH : NaN;
@@ -708,7 +712,7 @@ const PHYS = {
   }
 };
 </script>
-<script>const AUDIO = new Set(["015d81f5", "0266fdac", "02dd258e", "03e284e0", "0493c373", "04c63e40", "0571f95d", "071ffbab", "08fddb49", "09742d40", "0a17699e", "0ab68683", "0c00367b", "0d72b1fe", "0e2a09f1", "0e66d63c", "0ebf81b7", "111c8b81", "137f47fb", "138e5ab9", "14c883b8", "15519c03", "16912f26", "1694e95c", "1880440a", "1951eef5", "1b0c0049", "1cd55c5e", "1eb2f6c7", "1f7bc452", "21a55036", "24b0a619", "254289fd", "26137b89", "26b7e6ed", "2905d5ae", "2ac11257", "2b56cf86", "2d79a027", "2e0acdf6", "2e1fca62", "30a32a51", "343bbf49", "35d7d063", "35d82ed3", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c4e25fc", "3c9712aa", "3d2c6685", "3d676353", "3e33512a", "3e5e585c", "3e89e021", "3ff8aeec", "44e4835c", "452c6417", "45effcac", "48d50000", "49869147", "49e3d79c", "4a3ee721", "4aa9c8f1", "4ddc5886", "4e96b7f3", "4ff429b0", "50661b7c", "506650ac", "510f28dc", "51d53770", "51db0960", "528baa5f", "56f9b299", "587fbfb3", "58fae00a", "5992aefa", "5ad60823", "5b4777d2", "5c3834b5", "5d460316", "5d87753f", "5dd99624", "608d8965", "610b3b43", "611a02ce", "61350b70", "62cae3bb", "64a38442", "67c5c42b", "685a4c25", "6895625e", "693e8357", "694c1445", "69cd74bc", "6ca5990d", "6d38f40e", "704696a4", "714ddf45", "717e4c30", "75e6e64b", "7733e00d", "77b757e9", "798e90b0", "79fe5ee8", "7a696aae", "7a86d1df", "7bcf7889", "7d958be7", "7e733106", "7ee44240", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "854f807a", "8586e33a", "85a7e569", "863520e8", "86c9e559", "8aa49894", "8c756bd6", "8d21263e", "8d799c60", "8f1dbb08", "8f967b80", "8faab5f1", "901e8ae3", "907a6dae", "90fc55fa", "91c21520", "95a8d84e", "95e50e6c", "97348e01", "98717a2e", "9943b37c", "9b696576", "9d76e97f", "9f002d24", "9fc9dbf5", "9ff8386e", "a1edf758", "a22c89d5", "a23dec1d", "a2ceac02", "a2f997f3", "a3ba9b42", "a6651abf", "a92c8b97", "aa56974c", "ac590324", "ae4cabaf", "ae9af28c", "b05658bb", "b14565e3", "b1aa9bac", "b21ebadd", "b22e34f9", "b28dcac4", "b4db0592", "b50d4849", "b5805b77", "b70c5c24", "b89c71f7", "b8f25ab2", "b9dc7daf", "b9de1b74", "bba32bb5", "bc0b77a8", "bd60890f", "bf70a4de", "c315a2de", "c50aa230", "c5d3c631", "c6782b31", "c8ea9009", "ca514238", "ca59f537", "ca8d5f2c", "cc54e602", "cd19f122", "cd9b1e8c", "d089c48f", "d198cc7e", "d1b48888", "d3db9d15", "d47c69f9", "d5153738", "d769d47a", "d8199391", "db66c9ce", "dbed11df", "dc0999ca", "de0cc64e", "e0629108", "e07add6b", "e186dcf0", "e1f25a14", "e24e8e96", "e2563ad4", "e2f8c4dc", "e427f31a", "e492c55d", "e5918597", "e712a7df", "e7ea5c43", "e857bee8", "eba2e535", "ed017451", "ee055384", "eeed0bf6", "f32e2da7", "f3a3d033", "f5857f54", "f656d72f", "f90b8ee9", "fae8136b", "fcfac5c9", "fe165d01", "fe6d229a", "ff181da6"]);</script>
+<script>const AUDIO = new Set(["015d81f5", "0266fdac", "02dd258e", "03e284e0", "0493c373", "04c63e40", "0571f95d", "05f69ef9", "071ffbab", "08fddb49", "09742d40", "0a17699e", "0ab68683", "0c00367b", "0d72b1fe", "0e2a09f1", "0e66d63c", "0ebf81b7", "111c8b81", "137f47fb", "138e5ab9", "14c883b8", "15519c03", "16912f26", "1694e95c", "1880440a", "1951eef5", "1b0c0049", "1cd55c5e", "1eb2f6c7", "1f7bc452", "21a55036", "225396a1", "24b0a619", "254289fd", "26137b89", "26b7e6ed", "2905d5ae", "2ac11257", "2b56cf86", "2d79a027", "2e0acdf6", "2e1fca62", "30a32a51", "343bbf49", "35d7d063", "35d82ed3", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c4e25fc", "3c9712aa", "3d2c6685", "3d676353", "3e33512a", "3e5e585c", "3e89e021", "3fc0ebd1", "3ff8aeec", "44e4835c", "452c6417", "45effcac", "48d50000", "49869147", "49e3d79c", "4a3ee721", "4aa9c8f1", "4ddc5886", "4e96b7f3", "4ff429b0", "50661b7c", "506650ac", "50798cd6", "510f28dc", "51d53770", "51db0960", "528baa5f", "54939591", "56f9b299", "587fbfb3", "58fae00a", "5992aefa", "5ad60823", "5b4777d2", "5c3834b5", "5d460316", "5d87753f", "5dd99624", "608d8965", "610b3b43", "611a02ce", "61350b70", "62cae3bb", "64a38442", "67c5c42b", "685a4c25", "6895625e", "693e8357", "694c1445", "69cd74bc", "6a5f285c", "6ca5990d", "6d38f40e", "6ec948de", "704696a4", "714ddf45", "717e4c30", "75e6e64b", "7733e00d", "77b757e9", "798e90b0", "79fe5ee8", "7a696aae", "7a86d1df", "7bcf7889", "7d958be7", "7e733106", "7ee44240", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "854f807a", "8586e33a", "85a7e569", "863520e8", "86c9e559", "8a12e2a6", "8aa49894", "8c388ccc", "8c756bd6", "8d21263e", "8d799c60", "8f1dbb08", "8f967b80", "8faab5f1", "901e8ae3", "907a6dae", "90fc55fa", "91c21520", "95a8d84e", "95e50e6c", "96fd0765", "97348e01", "98717a2e", "9943b37c", "9b696576", "9d76e97f", "9f002d24", "9fc9dbf5", "9ff8386e", "a1edf758", "a22c89d5", "a23dec1d", "a2ceac02", "a2f997f3", "a3ba9b42", "a6651abf", "a92c8b97", "aa56974c", "ac590324", "added546", "ae4cabaf", "ae9af28c", "af8605e4", "b05658bb", "b0e2ec75", "b14565e3", "b1aa9bac", "b21ebadd", "b22e34f9", "b28dcac4", "b4db0592", "b50d4849", "b5805b77", "b70c5c24", "b89c71f7", "b8f25ab2", "b9dc7daf", "b9de1b74", "bba32bb5", "bc0b77a8", "bd60890f", "bf70a4de", "c315a2de", "c4a21fe7", "c50aa230", "c5d3c631", "c6782b31", "c8ea9009", "ca514238", "ca59f537", "ca8d5f2c", "cc54e602", "cd19f122", "cd9b1e8c", "d089c48f", "d0c6d16b", "d198cc7e", "d1b48888", "d3db9d15", "d47c69f9", "d5153738", "d66f03df", "d769d47a", "d8199391", "db66c9ce", "dbed11df", "dc0999ca", "de0cc64e", "e0629108", "e07add6b", "e186dcf0", "e1f25a14", "e20de595", "e24e8e96", "e2563ad4", "e2f32242", "e2f8c4dc", "e427f31a", "e492c55d", "e5918597", "e712a7df", "e7ea5c43", "e857bee8", "eba2e535", "ed017451", "ee055384", "eeed0bf6", "f05716fc", "f32e2da7", "f3a3d033", "f5857f54", "f656d72f", "f90b8ee9", "fae8136b", "fcfac5c9", "fe165d01", "fe6d229a", "ff181da6"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
@@ -2185,7 +2189,7 @@ CH.push({
       explore: {
         title: 'Make the well depth slightly wrong and see what happens to B.',
         build(S, body, slider) {
-          slider(body, { id: 'e5', label: 'error in the well depth <i>ε</i>', min: -3, max: 3, step: 0.1, value: 1, show: v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' %', onInput: v => S._set(v / 100) });
+          slider(body, { id: 'e5', label: 'error in the well depth <i>ε</i>', min: -3, max: 3, step: 0.1, value: 1, show: v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' %', onInput: v => { S._pend = v; S._raf = S._raf || requestAnimationFrame(() => { S._raf = 0; S._set(S._pend / 100); }); } });
           body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2)', html: 'A 1 % error in <i>ε</i> already shifts <i>B</i> by about 4 % (≈ 0.6 cm³/mol) at room temperature, and by tens of percent near the Boyle temperature, where <i>B</i> itself is close to zero (≈ 0.4 cm³/mol absolute). That is why krypton\u2019s well depth known to ±0.25 % (chapter 2) matters.' }));
         }
       },
@@ -2534,7 +2538,7 @@ CH.push({
           S._ro.innerHTML = '';
           ['samples: ' + st.nM.toLocaleString('en').replace(/,/g, '\u2009'), 'plain:  ' + (isFinite(p) ? Math.round(p) + ' ± ' + Math.round(st.plainErr() * S._sc) : '–') + ' cm⁶/mol²', 'Mayer:  ' + (isFinite(m) ? Math.round(m) : '–') + ' cm⁶/mol²'].forEach((ln, i) => sv('tspan', { x: 110, dy: i ? 40 : 0, html: scriptfix(ln) }, S._ro));
         };
-        S._run = n => { const st = S._st; const next = Math.min(n, 1e6); while (st.nM < next) { const k = Math.min(next - st.nM, Math.max(100, Math.floor(st.nM * 0.08))); st.stepPlain(k); st.stepMayer(k); if (st.nM >= 100) { S._ptsP.push([st.nP, st.plain() * S._sc]); S._ptsM.push([st.nM, st.mayer() * S._sc]); } } S._draw(); };
+        S._run = (n, budget = Infinity) => { const st = S._st; const next = Math.min(n, 1e6), t0 = performance.now(); while (st.nM < next && performance.now() - t0 < budget) { const k = Math.min(next - st.nM, Math.max(100, Math.floor(st.nM * 0.08))); st.stepPlain(k); st.stepMayer(k); if (st.nM >= 100) { S._ptsP.push([st.nP, st.plain() * S._sc]); S._ptsM.push([st.nM, st.mayer() * S._sc]); } } S._draw(); return st.nM >= next; };
         S._run(100);
         S.text(110, 880, 'Same number of samples for both; exact value from quadrature. Notation as in the Mayer-sampling papers: ' + it('γ') + ' integrand, ' + it('π') + ' = |' + it('γ') + '|, HS hard spheres.', { size: 20, cls: 'muted' });
       },
@@ -2542,9 +2546,10 @@ CH.push({
         title: 'Run more samples and watch which estimate settles on the exact value.',
         build(S, body) {
           let timer = null, target = 100;
-          const step = () => { target = Math.min(1e6, Math.ceil(target * 1.25)); S._run(target); if (target >= 1e6) stop(); };
-          const go = hx('button', { class: 'go', onclick: () => { if (timer) stop(); else { timer = setInterval(step, 60); go.textContent = 'Pause'; } } }, 'Run');
-          const stop = () => { clearInterval(timer); timer = null; go.textContent = 'Run'; };
+          /* time-budgeted: at most ~12 ms of sampling per frame, so the page and Pause stay responsive */
+          const step = () => { if (!timer) return; if (S._st.nM >= target) target = Math.min(1e6, Math.ceil(target * 1.25)); const done = S._run(target, 12); if (done && target >= 1e6) stop(); else timer = requestAnimationFrame(step); };
+          const go = hx('button', { class: 'go', onclick: () => { if (timer) stop(); else { timer = requestAnimationFrame(step); go.textContent = 'Pause'; } } }, 'Run');
+          const stop = () => { cancelAnimationFrame(timer); timer = null; go.textContent = 'Run'; };
           const reset = hx('button', { class: 'go ghost', onclick: () => { stop(); S._st = PHYS.msmc(2); S._ptsP = []; S._ptsM = []; target = 100; S._run(100); } }, 'Reset');
           body.append(hx('div', { class: 'row', style: 'grid-column:1/-1' }, go, reset));
           body.append(hx('p', { style: 'margin:0;font-size:.92em;color:var(--ink-2);grid-column:1/-1', html: 'The weighted walk (orange) stays near contact, where the triangle of Mayer functions is large, and converges quickly. Plain sampling (grey) scatters over the whole box and needs vastly more samples for the same precision. For <i>B</i><sub>8</sub> the gap is astronomically larger.' }));
@@ -2677,7 +2682,7 @@ CH.push({
         S._bad = S.rect(A.X(13.4), A.Y(2), A.X(35) - A.X(13.4), A.Y(0) - A.Y(2), { class: 'f-rep', opacity: .06, hide: 1 });
         S._okT = S.text(A.X(1), A.Y(1.85), 'series converges well', { size: 24, cls: 'f-good', hide: 1 });
         S._badT = S.text(A.X(14.5), A.Y(1.85), 'liquid-like densities: simulate', { size: 24, cls: 'f-rep', hide: 1 });
-        S._exact = S.path(S.curve(ex, 0, 35, A.X, A.Y, 200), { cls: 'ink', w: 6, hide: 1 });
+        S._exact = S.path(S.curve(ex, 0, 35, A.X, A.Y, 200, [0, 2]), { cls: 'ink', w: 6, hide: 1 });
         const trunc = [[r => 1 - 0.035 * r, 'kr', 'B only'], [r => 1 - 0.035 * r + 0.0018 * r * r, 'ar', 'B + C'], [r => 1 - 0.035 * r + 0.0018 * r * r - 0.0000040 * Math.pow(r, 3) + 0.0000030 * Math.pow(r, 4) - 0.00000010 * Math.pow(r, 5), 'he', 'up to higher orders']];
         S._tr = trunc.map(([fn, c, lab], k) => { const p = S.path(S.curve(fn, 0, 35, A.X, A.Y, 200, [0, 2]), { cls: c, w: 4, 'stroke-dasharray': '10 7', hide: 1 }); return p; });
         S._leg = S.group({ hide: 1 });
@@ -2782,7 +2787,7 @@ CH.push({
             if (dU < 0 || rnd() < Math.exp(-dU / S._T)) P[i] = [x, y];
           }
           P.forEach((p, i) => { S._c[i].setAttribute('cx', (ox + p[0] * px).toFixed(1)); S._c[i].setAttribute('cy', (oy + p[1] * px).toFixed(1)); });
-          if (!REDUCE) requestAnimationFrame(loop);
+          if (REDUCE) setTimeout(loop, 400); else requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
         S.text(110, 880, 'Qualitative only: real argon is three-dimensional and needs the ab initio potentials of this chapter.', { size: 20, cls: 'muted' });
@@ -2926,6 +2931,7 @@ CH.push({
         S._read = S.text(110, 830, '', { size: 28, cls: 't-mono' });
         S.text(110, 880, 'Relative motion in the centre-of-mass frame, partner drawn fixed; atoms have diameter ' + it('σ') + ', so they touch at ' + it('R') + ' = ' + it('σ') + '.', { size: 21, cls: 'muted' });
         S._fire = async (b, E, ms = 2200) => {
+          const tok = S._ft = (S._ft || 0) + 1;          // a newer shot cancels older animations
           const t = PHYS.trajectory(b, E);
           const P = t.pts.map(([x, y]) => [S._cx + x * S._sc, S._cy - y * S._sc]);
           S._bl.replaceChildren();
@@ -2934,6 +2940,7 @@ CH.push({
           S.text(184, S._cy - b * S._sc / 2 + 10, it('b'), { size: 30, cls: 'f-he', parent: S._bl });
           S._read.innerHTML = it('b') + '/' + it('σ') + ' = ' + b.toFixed(2) + '    ' + it('E') + '/' + it('ε') + ' = ' + E.toFixed(2) + '    deflection ' + it('χ') + ' = ' + fmt(t.chi * 180 / Math.PI, 0) + '°';
           await S.tween(ms, (e, raw) => {
+            if (tok !== S._ft) return;
             const n = Math.max(2, Math.floor(raw * P.length));
             S._trail.setAttribute('d', P.slice(0, n).map((p, k) => (k ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(''));
             const p = P[n - 1]; S._proj.setAttribute('cx', p[0]); S._proj.setAttribute('cy', p[1]);
@@ -3664,8 +3671,9 @@ const REEL = (() => {
       a.traj.forEach((tr, k) => {
         const start = (k / a.traj.length) * .55, q = cl((p - start) / .3); if (q <= 0) return;
         const n = Math.max(2, Math.floor(q * tr.pts.length));
-        c.strokeStyle = hexA(tr.col, .55 * v); c.lineWidth = 2.2; c.shadowColor = tr.col; c.shadowBlur = 12;
-        c.beginPath(); for (let i = 0; i < n; i++) { const [x, y] = tr.pts[i]; i ? c.lineTo(x * sc, y * sc * tr.side) : c.moveTo(x * sc, y * sc * tr.side); } c.stroke();
+        c.beginPath(); for (let i = 0; i < n; i++) { const [x, y] = tr.pts[i]; i ? c.lineTo(x * sc, y * sc * tr.side) : c.moveTo(x * sc, y * sc * tr.side); }
+        c.strokeStyle = hexA(tr.col, .12 * v); c.lineWidth = 7; c.stroke();          // cheap glow instead of shadowBlur
+        c.strokeStyle = hexA(tr.col, .55 * v); c.lineWidth = 2.2; c.stroke();
         if (q < 1) { const [x, y] = tr.pts[n - 1]; glowAtom(c, x * sc, y * sc * tr.side, 6, tr.col, v); }
       });
       c.restore(); glowAtom(c, 800, 450, 30, C.violet, v);
@@ -3751,12 +3759,15 @@ const REEL = (() => {
     const ctx = cv.getContext('2d');
     let audio = null, t0 = 0, playing = false, raf = 0, tNow = DUR - 2.5, started = false;
     const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
-    const size = () => { const r = box.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1), w = Math.min(r.width, r.height ? r.height * 16 / 9 : r.width), h = w * 9 / 16; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); ctx.setTransform(cv.width / 1600, 0, 0, cv.height / 900, 0, 0); frame(ctx, tNow); };
+    const size = () => { const r = box.getBoundingClientRect(), w = Math.min(r.width, r.height ? r.height * 16 / 9 : r.width), h = w * 9 / 16, d = Math.min(2, window.devicePixelRatio || 1, 2400 / Math.max(w, 1)); cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); ctx.setTransform(cv.width / 1600, 0, 0, cv.height / 900, 0, 0); frame(ctx, tNow); };
+    let sync = null;
+    const ICON_IN = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const ICON_OUT = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     if (box.requestFullscreen || box.webkitRequestFullscreen) {
       const fs = hx('button', { class: 'reel-fs', 'aria-label': 'Full screen', title: 'Full screen' });
-      fs.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-      fs.onclick = e => { e.stopPropagation(); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (box.requestFullscreen || box.webkitRequestFullscreen).call(box); };
-      const sync = () => { const on = fsEl() === box; box.classList.toggle('is-fs', on); fs.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); fs.title = fs.getAttribute('aria-label'); };
+      fs.innerHTML = ICON_IN;
+      fs.onclick = e => { e.stopPropagation(); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else { const p = (box.requestFullscreen || box.webkitRequestFullscreen).call(box); if (p && p.catch) p.catch(() => {}); } };
+      sync = () => { const on = fsEl() === box; box.classList.toggle('is-fs', on); fs.innerHTML = on ? ICON_OUT : ICON_IN; fs.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); fs.title = fs.getAttribute('aria-label'); };
       document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync);
       box.append(fs);
     }
@@ -3768,18 +3779,26 @@ const REEL = (() => {
       bar.firstChild.style.width = (Math.min(1, tNow / DUR) * 100) + '%';
       if (tNow < DUR && playing) raf = requestAnimationFrame(loop); else stop(true);
     };
-    const stop = ended => { playing = false; cancelAnimationFrame(raf); if (audio) audio.pause(); box.classList.remove('is-playing'); btn.lastChild.textContent = ended ? 'Watch again' : 'Resume the trailer'; if (ended) tNow = DUR - .01; };
+    const stop = ended => { playing = false; cancelAnimationFrame(raf); if (audio) audio.pause(); box.classList.remove('is-playing'); btn.lastChild.textContent = ended ? 'Watch again' : 'Resume the trailer'; btn.setAttribute('aria-label', btn.lastChild.textContent); if (ended) tNow = DUR - .01; };
     btn.onclick = () => {
       if (playing) return stop(false);
       if (!started || tNow >= DUR - .05) tNow = 0;
       started = true;
       playing = true; box.classList.add('is-playing');
-      try { audio = audio || new Audio('reel/reel.m4a'); audio.currentTime = tNow; audio.play().catch(() => {}); } catch (e) {}
-      t0 = performance.now() - tNow * 1000;
-      raf = requestAnimationFrame(loop);
+      /* start the picture when the sound actually starts (slow connections), with a fallback */
+      let begun = false;
+      const begin = () => { if (begun || !playing) return; begun = true; t0 = performance.now() - tNow * 1000; raf = requestAnimationFrame(loop); };
+      try {
+        audio = audio || new Audio('reel/reel.m4a'); audio.currentTime = tNow;
+        audio.addEventListener('playing', begin, { once: true }); audio.addEventListener('error', begin, { once: true });
+        const p = audio.play(); if (p && p.catch) p.catch(begin);
+      } catch (e) { begin(); }
+      setTimeout(begin, 1500);
     };
     box.addEventListener('click', e => { if (playing && e.target === cv) stop(false); });
-    return () => { stop(false); ro.disconnect(); };
+    return () => { stop(false); ro.disconnect();
+      if (sync) { document.removeEventListener('fullscreenchange', sync); document.removeEventListener('webkitfullscreenchange', sync); }
+      if (audio) { try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch (e) {} audio = null; } };
   }
   return { mount, frame, DUR };
 })();
@@ -3834,7 +3853,7 @@ function renderHome(anchor) {
       hx('div', { style: 'margin-top:26px;display:flex;gap:10px;flex-wrap:wrap' },
         hx('a', { class: 'btn', href: '#' + CH[0].id }, '▶ Start with chapter 1'),
         hx('a', { class: 'btn ghost', href: '#papers' }, 'Browse the papers'))),
-    (() => { const r = hx('div', { class: 'reel' }); setTimeout(() => { try { REEL.mount(r); } catch (e) { console.error(e); } }, 0); return r; })());
+    (() => { const r = hx('div', { class: 'reel' }); setTimeout(() => { try { if (reelStop) reelStop(); reelStop = REEL.mount(r); } catch (e) { console.error(e); } }, 0); return r; })());
   app.append(cover);
   app.append(hx('div', { class: 'section-h' }, hx('h2', {}, 'The ladder'), hx('p', {}, 'From two molecules to the properties of a gas: the route the chapters take.')));
   app.append(hx('div', { class: 'ladder', style: 'max-width:620px', html: COURSE.ladderSVG }));
@@ -3876,7 +3895,9 @@ function renderHome(anchor) {
 }
 
 let keyHandler = null;
-function stopLesson() { interrupt(); if (P.cleanup) { try { P.cleanup(); } catch (e) {} P.cleanup = null; } P.gen++; S.gen = P.gen; P.playing = false; if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } }
+let reelStop = null;
+function stopReel() { if (reelStop) { try { reelStop(); } catch (e) {} reelStop = null; } }
+function stopLesson() { stopReel(); interrupt(); if (P.cleanup) { try { P.cleanup(); } catch (e) {} P.cleanup = null; } P.gen++; S.gen = P.gen; P.playing = false; if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; } }
 
 function renderLesson(ch) {
   stopLesson();
@@ -3926,8 +3947,9 @@ function renderLesson(ch) {
         hx('p', { style: 'font-size:12.5px;color:var(--ink-2);margin:12px 0 0', html: 'Keys: <span class="kbd">Space</span> play/pause · <span class="kbd">←</span><span class="kbd">→</span> steps' }))));
 
   keyHandler = e => {
+    if (e.altKey || e.metaKey || e.ctrlKey || !e.target.closest) return;
     if (e.target.closest('input,textarea,select')) return;
-    if (e.key === ' ' && !e.target.closest('button,a,[role=button]')) { e.preventDefault(); togglePlay(); }
+    if (e.key === ' ' && !e.target.closest('button,a,[role=button],[role=slider]')) { e.preventDefault(); togglePlay(); }
     else if (e.key === 'ArrowRight') gotoBeat(P.i + 1, P.playing);
     else if (e.key === 'ArrowLeft') gotoBeat(P.i - 1, P.playing);
   };
@@ -3940,6 +3962,7 @@ function route() {
   const id = (location.hash || '').slice(1);
   const ch = CH.find(c => c.id === id);
   if (ch) renderLesson(ch);
+  else if (id && document.querySelector('.cover') && ['chapters', 'research', 'papers', 'glossary'].includes(id) && document.getElementById(id)) document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
   else renderHome(['chapters', 'research', 'papers', 'glossary'].includes(id) ? id : null);
 }
 window.addEventListener('hashchange', route);
