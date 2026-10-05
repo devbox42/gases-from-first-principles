@@ -99,7 +99,7 @@ h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;l
 .reel-fs:hover,.reel-fs:focus-visible{opacity:1;border-color:#f2a65a}
 .reel.is-fs,.reel:fullscreen{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none}
 .reel.is-fs .reel-fs svg path{d:path('M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5')}
-.reel-play{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;padding:12px 20px 12px 14px;border-radius:99px;border:1px solid rgba(242,166,90,.6);background:rgba(3,6,12,.72);color:#e8eef6;font:600 14px/1 var(--body);cursor:pointer;backdrop-filter:blur(6px);transition:opacity .3s}
+.reel-play{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;padding:12px 20px 12px 14px;border-radius:99px;border:1px solid rgba(242,166,90,.6);background:rgba(3,6,12,.72);color:#e8eef6;font:600 14px/1 var(--body);cursor:pointer;backdrop-filter:blur(6px);transition:opacity .3s}
 .reel-play:hover{border-color:#f2a65a}
 .reel-tri{width:30px;height:30px;border-radius:50%;background:#f2a65a;position:relative;flex:none}
 .reel-tri::after{content:"";position:absolute;left:11px;top:8px;border-left:11px solid #03060c;border-top:7px solid transparent;border-bottom:7px solid transparent}
@@ -702,7 +702,7 @@ const PHYS = {
   }
 };
 </script>
-<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "138e5ab9", "1694e95c", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "35d7d063", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "45effcac", "48d50000", "49e3d79c", "4ff429b0", "50661b7c", "510f28dc", "51d53770", "51db0960", "58fae00a", "5992aefa", "5d460316", "5dd99624", "64a38442", "67c5c42b", "685a4c25", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "7733e00d", "77b757e9", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "8586e33a", "8aa49894", "8f1dbb08", "8faab5f1", "901e8ae3", "90fc55fa", "91c21520", "95a8d84e", "97348e01", "98717a2e", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a2ceac02", "a2f997f3", "a3ba9b42", "a92c8b97", "b21ebadd", "b22e34f9", "b70c5c24", "b89c71f7", "b9dc7daf", "bc0b77a8", "c315a2de", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d198cc7e", "d5153738", "d769d47a", "d8199391", "dc0999ca", "e24e8e96", "e2563ad4", "e5918597", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
+<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "137f47fb", "138e5ab9", "1694e95c", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "35d7d063", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "45effcac", "48d50000", "49e3d79c", "4a3ee721", "4aa9c8f1", "4ff429b0", "50661b7c", "510f28dc", "51d53770", "51db0960", "587fbfb3", "58fae00a", "5992aefa", "5ad60823", "5d460316", "5dd99624", "62cae3bb", "64a38442", "67c5c42b", "685a4c25", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "75e6e64b", "7733e00d", "77b757e9", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "8586e33a", "85a7e569", "8aa49894", "8f1dbb08", "8faab5f1", "901e8ae3", "90fc55fa", "91c21520", "95a8d84e", "97348e01", "98717a2e", "9943b37c", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a23dec1d", "a2ceac02", "a2f997f3", "a3ba9b42", "a6651abf", "a92c8b97", "b21ebadd", "b22e34f9", "b5805b77", "b70c5c24", "b89c71f7", "b8f25ab2", "b9dc7daf", "bba32bb5", "bc0b77a8", "c315a2de", "c50aa230", "c5d3c631", "c6782b31", "c8ea9009", "ca59f537", "ca8d5f2c", "cc54e602", "cd9b1e8c", "d089c48f", "d198cc7e", "d5153738", "d769d47a", "d8199391", "dbed11df", "dc0999ca", "e0629108", "e24e8e96", "e2563ad4", "e5918597", "e7ea5c43", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
@@ -3557,12 +3557,14 @@ const REEL = (() => {
     c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 2.4, 0, 6.283); c.fill();
   }
   function hexA(h, a) { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+  /* electron cloud: a soft blob that sloshes along the axis (fluctuating dipole), no orbits */
   function cloud(c, x, y, r, col, phase, a) {
+    const ox = Math.cos(phase) * r * .28;
     c.save(); c.globalCompositeOperation = 'lighter';
-    for (let k = 0; k < 90; k++) {
-      const ang = k * 2.39996 + phase * .3, rr = r * (0.55 + 0.45 * ((k * 0.618) % 1));
-      const ox = Math.cos(phase) * r * .22;
-      c.fillStyle = hexA(col, .07 * a); c.beginPath(); c.arc(x + ox + rr * Math.cos(ang), y + rr * Math.sin(ang), 9, 0, 6.283); c.fill();
+    for (const [k, al] of [[1.25, .16], [.85, .22], [.5, .22]]) {
+      const g = c.createRadialGradient(x + ox, y, 0, x + ox * .6, y, r * k);
+      g.addColorStop(0, hexA(col, al * a)); g.addColorStop(.6, hexA(col, al * .45 * a)); g.addColorStop(1, hexA(col, 0));
+      c.fillStyle = g; c.beginPath(); c.ellipse(x + ox * .6, y, r * k * (1 + Math.abs(Math.cos(phase)) * .12), r * k, 0, 0, 6.283); c.fill();
     }
     c.restore();
   }
@@ -3598,7 +3600,7 @@ const REEL = (() => {
     if (t < CUE.atoms[1] + 1.2) {
       const v = vis(t, [CUE.atoms[0], CUE.atoms[1] + 1.2], 1.4, 1.2), p = ease(cl(ph(t, CUE.atoms) * 1.15));
       const d = 520 - 330 * p, lock = cl((t - 4.2) / 2);
-      const fl = t * 7.5, x1 = 800 - d / 2, x2 = 800 + d / 2;
+      const fl = t * 6 + .7 * Math.sin(t * 2.3), x1 = 800 - d / 2, x2 = 800 + d / 2;
       cloud(c, x1, 450, 120, C.violet, fl, v); cloud(c, x2, 450, 120, C.violet, (fl * 1.37 + 2.1) * (1 - lock) + fl * lock, v);
       glowAtom(c, x1, 450, 26, C.violet, v); glowAtom(c, x2, 450, 26, C.violet, v);
       if (lock > 0.3) { c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = hexA(C.att, .25 * lock * v); c.lineWidth = 2; c.setLineDash([6, 10]); c.beginPath(); c.moveTo(x1 + 40, 450); c.lineTo(x2 - 40, 450); c.stroke(); c.restore(); }
@@ -3606,7 +3608,7 @@ const REEL = (() => {
     // 2 · the curve draws itself, equations float
     if (t > CUE.curve[0] - .6 && t < CUE.curve[1] + .8) {
       const v = vis(t, [CUE.curve[0] - .6, CUE.curve[1] + .8], .8, .8), p = ease(cl(ph(t, CUE.curve) * 1.6));
-      const eq = ['Ĥ Ψ = E Ψ', 'CCSD(T)', '−1055.183 47 Eₕ', 'V(R)', 'Born–Oppenheimer', 'CCSDTQ(P)', 'basis set → CBS', 'BSSE'];
+      const eq = ['Ĥ Ψ = E Ψ', 'CCSD(T)', '−1055.183 47 Eₕ', 'Born–Oppenheimer', 'CCSDTQ(P)', 'basis set → CBS', 'BSSE'];
       eq.forEach((s, k) => text(c, s, 200 + (k * 211) % 1250, 160 + (k * 137) % 600 + Math.sin(t * .6 + k) * 14, 26 + (k % 3) * 8, C.dim, .25 * v, { font: '"IBM Plex Mono", monospace' }));
       c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = hexA(C.amber, .9 * v); c.lineWidth = 5; c.shadowColor = C.amber; c.shadowBlur = 28;
       curvePath(c, 260, 1360, 540, 1.25, p); c.stroke(); c.restore();
@@ -3641,7 +3643,7 @@ const REEL = (() => {
       for (let m = 0; m < 3; m++) {
         const cx = 360 + m * 220, cy = 450 + Math.sin(t * 1.3 + m) * 30, R = 70 * (1.2 - .6 * p) * (1 + .15 * Math.sin(t * 3 + m));
         c.save(); c.globalCompositeOperation = 'lighter';
-        for (let k = 0; k < 16; k++) { const an = k / 16 * 6.283 + t * .8, rr = R * (1 + .22 * Math.sin(3 * an + t * 2 + m)); glowAtom(c, cx + rr * Math.cos(an), cy + rr * Math.sin(an), 6, C.amber, v * .9); }
+        for (let k = 0; k < 16; k++) { const an = k / 16 * 6.283 + .12 * Math.sin(t * 5.3 + k * 2.1 + m), rr = R * (1 + .16 * Math.sin(2 * an + t * 1.7 + m) + .1 * Math.sin(3 * an - t * 2.9 + 2 * m) + .06 * Math.sin(k * 7.3 + t * 6.1)); glowAtom(c, cx + rr * Math.cos(an), cy + rr * Math.sin(an), 6, C.amber, v * .9); }
         c.restore();
       }
       for (let m = 0; m < 2; m++) {
@@ -3655,16 +3657,22 @@ const REEL = (() => {
       const v = vis(t, [CUE.phase[0] - .6, CUE.phase[1] + .8], .7, .9), p = ph(t, CUE.phase);
       const P = (x, y) => [180 + x * 680, 760 - y * 520];
       c.save(); c.globalAlpha = .4 * v; c.strokeStyle = C.dim; c.lineWidth = 1.5; c.beginPath(); c.moveTo(...P(0, 1)); c.lineTo(...P(0, 0)); c.lineTo(...P(1, 0)); c.stroke(); c.restore();
+      text(c, 'T', P(1, 0)[0] + 24, P(1, 0)[1], 30, C.dim, .8 * v, { italic: 1 }); text(c, 'p', P(0, 1)[0], P(0, 1)[1] - 26, 30, C.dim, .8 * v, { italic: 1 });
       const q = ease(cl(p * 1.8)); c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = hexA(C.violet, .95 * v); c.lineWidth = 5; c.shadowColor = C.violet; c.shadowBlur = 24; c.beginPath();
       for (let i = 0; i <= 100 * q; i++) { const x = .05 + i / 100 * .55, y = .08 + Math.pow(i / 100, 2.2) * .62; const [X, Y] = P(x, y); i ? c.lineTo(X, Y) : c.moveTo(X, Y); } c.stroke(); c.restore();
       if (p > .55) { const f = cl((p - .55) * 4), [X, Y] = P(.6, .7); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = hexA(C.amber, .12 * f * v); c.fillRect(X, 760 - 520, 860 - X, Y - 240); c.restore(); glowAtom(c, X, Y, 12 + 40 * f * (1 - cl((p - .75) * 3)), C.amber, v); text(c, 'supercritical', X + 120, Y - 50, 30, C.amber, v * f, { italic: 1 }); }
-      const g = ease(cl((p - .15) * 1.4));
-      c.save(); c.globalCompositeOperation = 'lighter'; for (const s of a.parts) glowAtom(c, s.x0 + (s.x1 - s.x0) * g, s.y0 + (s.y1 - s.y0) * g, 5, C.teal, v * .8); c.restore();
+      // below the critical point: liquid droplets in vapour; once the critical point is passed they dissolve into one uniform fluid
+      const g = 1 - ease(cl((p - .58) * 2.6));
+      c.save(); c.globalCompositeOperation = 'lighter';
+      a.parts.forEach((s, k) => { const jx = 6 * Math.sin(t * 3.1 + k * 1.7), jy = 6 * Math.cos(t * 2.7 + k * 2.3); glowAtom(c, s.x0 + (s.x1 - s.x0) * g + jx, s.y0 + (s.y1 - s.y0) * g + jy, 5, C.teal, v * .8); });
+      c.restore();
+      text(c, 'liquid + vapour', 1260, 860, 26, C.teal, v * cl((.55 - p) * 6) * cl(p * 6), { font: '"IBM Plex Mono", monospace', spacing: 2 });
+      text(c, 'one fluid', 1260, 860, 26, C.amber, v * cl((p - .78) * 6), { font: '"IBM Plex Mono", monospace', spacing: 2 });
     }
     // 7 · kinetic typography: the numbers
     if (t > CUE.numbers[0] - .2 && t < CUE.numbers[1] + .5) {
       const span = (CUE.numbers[1] - CUE.numbers[0]) / 3;
-      const items = [['±0.51 K', 'krypton’s well depth'], ['0.003 %', 'neon’s polarizability'], ['10 × better', 'than measuring helium']];
+      const items = [['±0.51 K', 'krypton’s well depth, computed'], ['±0.02 %', 'argon pressures, from theory alone'], ['1 K – 10 000 K', 'helium viscosity, beyond any lab’s range']];
       items.forEach(([big, small], k) => {
         const t0 = CUE.numbers[0] + k * span, q = (t - t0) / span; if (q < 0 || q > 1.15) return;
         const slam = 1 + 1.4 * Math.pow(1 - cl(q * 5), 3), a2 = cl(q * 8) * cl((1.1 - q) * 6);
@@ -3678,7 +3686,7 @@ const REEL = (() => {
       const p = ph(t, CUE.title), v = cl(p * 3);
       for (let k = 0; k < 2; k++) glowAtom(c, 800 + (k ? 1 : -1) * (90 + 30 * Math.sin(t)), 300, 18, C.violet, v * .8);
       text(c, 'Gases from First Principles', 800, 450, 104, C.ink, v, { glow: C.amber, blur: 24 + 18 * Math.sin(t * 2), spacing: 4 * (1 - ease(cl(p * 2))) });
-      text(c, 'An animated course through the research of Robert Hellmann', 800, 540, 34, C.dim, cl(p * 3 - .6), { italic: 1 });
+      text(c, 'An animated course on the physics of real gases', 800, 540, 34, C.dim, cl(p * 3 - .6), { italic: 1 });
       text(c, '10 CHAPTERS  ·  NARRATED  ·  INTERACTIVE', 800, 610, 24, C.amber, cl(p * 3 - 1.1), { font: '"IBM Plex Mono", monospace', spacing: 5 });
     }
     // subtitles
@@ -3700,7 +3708,7 @@ const REEL = (() => {
     const bar = hx('div', { class: 'reel-bar' }, hx('div', { class: 'reel-prog' }));
     box.append(btn, bar);
     const ctx = cv.getContext('2d');
-    let audio = null, t0 = 0, playing = false, raf = 0, tNow = DUR - 2.5;
+    let audio = null, t0 = 0, playing = false, raf = 0, tNow = DUR - 2.5, started = false;
     const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
     const size = () => { const r = box.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1), w = Math.min(r.width, r.height ? r.height * 16 / 9 : r.width), h = w * 9 / 16; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); ctx.setTransform(cv.width / 1600, 0, 0, cv.height / 900, 0, 0); frame(ctx, tNow); };
     if (box.requestFullscreen || box.webkitRequestFullscreen) {
@@ -3722,7 +3730,8 @@ const REEL = (() => {
     const stop = ended => { playing = false; cancelAnimationFrame(raf); if (audio) audio.pause(); box.classList.remove('is-playing'); btn.lastChild.textContent = ended ? 'Watch again' : 'Resume the trailer'; if (ended) tNow = DUR - .01; };
     btn.onclick = () => {
       if (playing) return stop(false);
-      if (tNow >= DUR - .05) tNow = 0;
+      if (!started || tNow >= DUR - .05) tNow = 0;
+      started = true;
       playing = true; box.classList.add('is-playing');
       try { audio = audio || new Audio('reel/reel.m4a'); audio.currentTime = tNow; audio.play().catch(() => {}); } catch (e) {}
       t0 = performance.now() - tNow * 1000;
