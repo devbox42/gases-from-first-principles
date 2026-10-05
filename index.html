@@ -94,7 +94,11 @@ h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;l
 
 /* ---------- trailer reel ---------- */
 .reel{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:#03060c;box-shadow:0 18px 50px rgba(5,10,20,.35);max-width:100%}
-.reel-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.reel-canvas{position:absolute;inset:0;margin:auto;width:100%;height:100%;display:block}
+.reel-fs{position:absolute;top:10px;right:10px;width:44px;height:44px;display:grid;place-items:center;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(3,6,12,.55);color:#e8eef6;cursor:pointer;backdrop-filter:blur(6px);opacity:.75;transition:opacity .2s}
+.reel-fs:hover,.reel-fs:focus-visible{opacity:1;border-color:#f2a65a}
+.reel.is-fs,.reel:fullscreen{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none}
+.reel.is-fs .reel-fs svg path{d:path('M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5')}
 .reel-play{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:12px;padding:12px 20px 12px 14px;border-radius:99px;border:1px solid rgba(242,166,90,.6);background:rgba(3,6,12,.72);color:#e8eef6;font:600 14px/1 var(--body);cursor:pointer;backdrop-filter:blur(6px);transition:opacity .3s}
 .reel-play:hover{border-color:#f2a65a}
 .reel-tri{width:30px;height:30px;border-radius:50%;background:#f2a65a;position:relative;flex:none}
@@ -698,7 +702,7 @@ const PHYS = {
   }
 };
 </script>
-<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "138e5ab9", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "37ae0853", "38d4164b", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "49e3d79c", "50661b7c", "510f28dc", "51d53770", "5992aefa", "5d460316", "5dd99624", "64a38442", "67c5c42b", "685a4c25", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "77b757e9", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "8586e33a", "8aa49894", "8f1dbb08", "901e8ae3", "90fc55fa", "95a8d84e", "97348e01", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a2ceac02", "a2f997f3", "a3ba9b42", "a92c8b97", "b21ebadd", "b22e34f9", "b70c5c24", "b9dc7daf", "bc0b77a8", "c315a2de", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d198cc7e", "d769d47a", "d8199391", "e24e8e96", "e2563ad4", "e5918597", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
+<script>const AUDIO = new Set(["0266fdac", "04c63e40", "0571f95d", "071ffbab", "0a17699e", "0c00367b", "0e2a09f1", "0e66d63c", "138e5ab9", "1694e95c", "1b0c0049", "1f7bc452", "24b0a619", "254289fd", "26b7e6ed", "2905d5ae", "2b56cf86", "2d79a027", "35d7d063", "37ae0853", "37b4d308", "38d4164b", "3a820187", "3bbb1fc0", "3c9712aa", "3d676353", "3e5e585c", "3ff8aeec", "452c6417", "45effcac", "48d50000", "49e3d79c", "4ff429b0", "50661b7c", "510f28dc", "51d53770", "51db0960", "58fae00a", "5992aefa", "5d460316", "5dd99624", "64a38442", "67c5c42b", "685a4c25", "69cd74bc", "6d38f40e", "714ddf45", "717e4c30", "7733e00d", "77b757e9", "798e90b0", "7a696aae", "7a86d1df", "7ee686f6", "7f22facf", "7fae3e70", "81e38484", "81eb175b", "84edb711", "8586e33a", "8aa49894", "8f1dbb08", "8faab5f1", "901e8ae3", "90fc55fa", "91c21520", "95a8d84e", "97348e01", "98717a2e", "9b696576", "9d76e97f", "9f002d24", "a1edf758", "a2ceac02", "a2f997f3", "a3ba9b42", "a92c8b97", "b21ebadd", "b22e34f9", "b70c5c24", "b89c71f7", "b9dc7daf", "bc0b77a8", "c315a2de", "c8ea9009", "ca59f537", "ca8d5f2c", "cd9b1e8c", "d089c48f", "d198cc7e", "d5153738", "d769d47a", "d8199391", "dc0999ca", "e24e8e96", "e2563ad4", "e5918597", "e857bee8", "eba2e535", "ed017451", "eeed0bf6", "f3a3d033", "f656d72f", "f90b8ee9", "fcfac5c9"]);</script>
 <script>
 /* ===================== course data ===================== */
 const COURSE = {
@@ -3697,7 +3701,16 @@ const REEL = (() => {
     box.append(btn, bar);
     const ctx = cv.getContext('2d');
     let audio = null, t0 = 0, playing = false, raf = 0, tNow = DUR - 2.5;
-    const size = () => { const r = box.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.round(r.width * d); cv.height = Math.round(r.width * 9 / 16 * d); ctx.setTransform(cv.width / 1600, 0, 0, cv.height / 900, 0, 0); frame(ctx, tNow); };
+    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const size = () => { const r = box.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1), w = Math.min(r.width, r.height ? r.height * 16 / 9 : r.width), h = w * 9 / 16; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * d); cv.height = Math.round(h * d); ctx.setTransform(cv.width / 1600, 0, 0, cv.height / 900, 0, 0); frame(ctx, tNow); };
+    if (box.requestFullscreen || box.webkitRequestFullscreen) {
+      const fs = hx('button', { class: 'reel-fs', 'aria-label': 'Full screen', title: 'Full screen' });
+      fs.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      fs.onclick = e => { e.stopPropagation(); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (box.requestFullscreen || box.webkitRequestFullscreen).call(box); };
+      const sync = () => { const on = fsEl() === box; box.classList.toggle('is-fs', on); fs.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen'); fs.title = fs.getAttribute('aria-label'); };
+      document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync);
+      box.append(fs);
+    }
     const ro = new ResizeObserver(size); ro.observe(box);
     const now = () => audio && !audio.paused && isFinite(audio.currentTime) && audio.currentTime > 0 ? audio.currentTime : (performance.now() - t0) / 1000;
     const loop = () => {
